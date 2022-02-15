@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fastapi-view"
-version = "0.0.1"
+version = "0.0.2"
 description = ""
 authors = ["Sam Yao <turisesonia@gmail.com>"]
 license = "MIT"
@@ -12,7 +12,7 @@ classifiers = []
 # include = ["LICENSE"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.6"
 fastapi = "^0.70.0"
 ujson = "^5.1.0"
 Jinja2 = "^3.0.0"
