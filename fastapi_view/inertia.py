@@ -9,17 +9,17 @@ from . import view
 
 class _Inertia(object):
     def __init__(self):
-        self._root_path = "app"
+        self._root_template = "app"
         self._share_data = {}
 
     @property
-    def root_path(self):
-        """The root_path property."""
-        return self._root_path
+    def root_template(self):
+        """The root_template property."""
+        return self._root_template
 
-    @root_path.setter
-    def root_path(self, root_path: str):
-        self._root_path = root_path
+    @root_template.setter
+    def root_template(self, root_template: str):
+        self._root_template = root_template
 
     @property
     def share_data(self):
@@ -34,13 +34,13 @@ class _Inertia(object):
         self._share_data[key] = value
 
     def get_inertia_version(self):
-        m = (
-            self.root_path
-            if self.root_path.endswith(".html")
-            else f"{self.root_path}.html"
+        root_template_file = (
+            self.root_template
+            if self.root_template.endswith(".html")
+            else f"{self.root_template}.html"
         )
 
-        with open(f"{view.views_directory}/{m}", "rb") as tf:
+        with open(f"{view.views_directory}/{root_template_file}", "rb") as tf:
             bytes_content = tf.read()
 
         return hashlib.sha256(bytes_content).hexdigest()
@@ -72,4 +72,4 @@ class _Inertia(object):
             "page": ujson.dumps(page),
         }
 
-        return view(self.root_path, context)
+        return view(self.root_template, context)
