@@ -13,14 +13,14 @@ classifiers = []
 
 [tool.poetry.dependencies]
 python = "^3.8"
-fastapi = "^0.73.0"
+fastapi = "^0.70.0"
 ujson = "^5.1.0"
-Jinja2 = "^3.0.3"
+Jinja2 = "^3.0.0"
 
 [tool.poetry.dev-dependencies]
 black = {version = "^20.8b1", allow-prereleases = true}
 pytest = "^6.2.5"
-fastapi = "^0.73.0"
+fastapi = "^0.70.0"
 requests = "^2.27.1"
 
 [build-system]
