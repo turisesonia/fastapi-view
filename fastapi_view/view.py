@@ -9,6 +9,10 @@ class _View(object):
         self._templates = Jinja2Templates(directory=self.views_directory)
 
     @property
+    def templates(self):
+        return self._templates
+
+    @property
     def views_directory(self):
         return self._views_directory
 
