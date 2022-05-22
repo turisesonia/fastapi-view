@@ -2,9 +2,8 @@ import ujson
 import hashlib
 from typing import Any
 
-from fastapi import Request
 from fastapi.responses import JSONResponse
-from . import view
+from . import view, view_request
 
 
 class _Inertia(object):
@@ -45,7 +44,8 @@ class _Inertia(object):
 
         return hashlib.sha256(bytes_content).hexdigest()
 
-    def render(self, component: str, request: Request, props: dict = {}):
+    def render(self, component: str, props: dict = {}):
+        request = view_request.get()
         props = {**self.share_data, **props}
 
         partial_props = request.headers.getlist("X-Inertia-Partial-Data")
@@ -67,9 +67,6 @@ class _Inertia(object):
                 content=page, headers={"X-Inertia": "True", "Vary": "Accept"}
             )
 
-        context = {
-            "request": request,
-            "page": ujson.dumps(page),
-        }
+        context = {"page": ujson.dumps(page)}
 
         return view(self.root_template, context)

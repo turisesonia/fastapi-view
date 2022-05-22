@@ -3,18 +3,22 @@ import os
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
+from fastapi_view import view, view_request
 
-from fastapi_view import view
+from fastapi_view.middleware import ViewRequestMiddleware
 
 app_name = "Test fastapi app"
 app = FastAPI(title=app_name)
 
 view.views_directory = f"{os.path.abspath('tests')}/resources/views"
 
+client = TestClient(app)
+app.add_middleware(ViewRequestMiddleware)
+
 
 @app.get("/")
-def index(request: Request, name: str = "World"):
-    return view("index", {"request": request, "name": name})
+def index(name: str = "World"):
+    return view("index", {"name": name})
 
 
 client = TestClient(app)
