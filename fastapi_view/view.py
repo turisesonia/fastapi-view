@@ -2,6 +2,8 @@ import os
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
+from . import view_request
+
 
 class _View(object):
     def __init__(self):
@@ -22,14 +24,14 @@ class _View(object):
         self._templates = Jinja2Templates(directory=self.views_directory)
 
     def __call__(self, view_path: str, context: dict):
+        request = view_request.get()
 
-        if "request" not in context:
-            raise ValueError('context must include a "request" key')
-
-        if not isinstance(context["request"], Request):
+        if not request or not isinstance(request, Request):
             raise ValueError("request instance type must be fastapi.Request")
 
         if not view_path.endswith(".html"):
             view_path = f"{view_path}.html"
+
+        context["request"] = request
 
         return self._templates.TemplateResponse(view_path, context)
