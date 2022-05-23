@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fastapi-view"
-version = "0.0.4"
+version = "0.1.0"
 description = "A jinja2 view template helping function for FastAPI."
 authors = ["Sam Yao <turisesonia@gmail.com>"]
 license = "MIT"
