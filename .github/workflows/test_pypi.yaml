@@ -1,0 +1,26 @@
+name: deploy
+
+# Controls when the action will run.
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  release:
+    types: [published]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build and publish to pypi
+        uses: JRubics/poetry-publish@v1.11
+        with:
+          python_version: '3.8'
+          pypi_token: ${{ secrets.TEST_PYPI_TOKEN }}
+          repository_name: 'testpypi'
+          repository_url: 'https://test.pypi.org/legacy/'
+          allow_poetry_pre_release: 'no'
+          ignore_dev_requirements: 'yes'
