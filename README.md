@@ -32,8 +32,6 @@ pip install fastapi-view
   from fastapi_view import view
 
   app = FastAPI()
-
-  from fastapi_view.middleware import ViewRequestMiddleware
   app.add_middleware(ViewRequestMiddleware)
 
   @app.get("/")
