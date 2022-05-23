@@ -28,13 +28,18 @@ pip install fastapi-view
   ```python
   from fastapi import FastAPI
   from fastapi.requests import Request
+  from fastapi_view.middleware import ViewRequestMiddleware
   from fastapi_view import view
 
   app = FastAPI()
 
+  from fastapi_view.middleware import ViewRequestMiddleware
+  app.add_middleware(ViewRequestMiddleware)
+
   @app.get("/")
-  def index(request: Request):
-      return view("index", {"request": request, "foo": "bar"})
+  def index():
+      return view("index", {"foo": "bar"})
+
   ```
 
 - Use inertia render
@@ -42,11 +47,14 @@ pip install fastapi-view
   ```python
   from fastapi import FastAPI
   from fastapi.requests import Request
+  from fastapi_view.middleware import ViewRequestMiddleware
   from fastapi_view import inertia
 
   app = FastAPI()
+  app.add_middleware(ViewRequestMiddleware)
 
   @app.get("/inertia/page")
-  def inertia_index(request: Request):
-      return inertia.render("Index", request=request, props={"foo": "bar"})
+  def inertia_index():
+      return inertia.render("Index", props={"foo": "bar"})
+
   ```
