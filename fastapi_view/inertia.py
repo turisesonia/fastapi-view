@@ -48,12 +48,9 @@ class _Inertia(object):
         request = view_request.get()
         props = {**self.share_data, **props}
 
-        partial_props = request.headers.getlist("X-Inertia-Partial-Data")
-
-        if partial_props and component == request.headers.get(
-            "X-Inertia-Partial-Component"
-        ):
-            props = {key: value for key, value in props.items() if key in partial_props}
+        partials = request.headers.getlist("X-Inertia-Partial-Data")
+        if partials and component == request.headers.get("X-Inertia-Partial-Component"):
+            props = {key: value for key, value in props.items() if key in partials}
 
         page = {
             "version": self.get_inertia_version(),

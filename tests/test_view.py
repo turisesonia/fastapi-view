@@ -1,38 +1,26 @@
-import os
-
-from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
-
-from fastapi_view import view, view_request
-
-from fastapi_view.middleware import ViewRequestMiddleware
-
-app_name = "Test fastapi app"
-app = FastAPI(title=app_name)
-
-view.views_directory = f"{os.path.abspath('tests')}/resources/views"
-
-client = TestClient(app)
-app.add_middleware(ViewRequestMiddleware)
+from pyquery import PyQuery as pq
 
 
-@app.get("/")
-def index(name: str = "World"):
-    return view("index", {"name": name})
+def test_view_response(app):
+    with TestClient(app) as client:
+        response = client.get("/")
+
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "text/html; charset=utf-8"
+        assert response.template.name == "index.html"
 
 
-client = TestClient(app)
+def test_access_abount(app):
+    with TestClient(app) as client:
+        message = "This is about page"
+        response = client.get("/about", params={"message": message})
 
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "text/html; charset=utf-8"
+        assert response.template.name == "about.html"
 
-def test_view_response():
-    response = client.get("/")
+        d = pq(response.text)
+        h = d("#title")
 
-    assert response.ok
-    assert response.headers["content-type"] == "text/html; charset=utf-8"
-    assert response.template.name == "index.html"
-
-
-def test_view_get_templates():
-    from fastapi.templating import Jinja2Templates
-
-    assert isinstance(view.templates, Jinja2Templates)
+        assert h.text() == message

@@ -9,3 +9,7 @@ view = _View()
 from .inertia import _Inertia
 
 inertia = _Inertia()
+
+from .vite import _Vite
+
+vite = _Vite()
