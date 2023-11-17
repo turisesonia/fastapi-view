@@ -12,17 +12,24 @@ classifiers = []
 # include = ["LICENSE"]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 fastapi = ">=0.70.0"
 ujson = "^5.0.0"
 Jinja2 = "^3.0.0"
 
-[tool.poetry.dev-dependencies]
-black = {version = "^20.8b1", allow-prereleases = true}
-pytest = "^6.2.5"
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.3"
 fastapi = ">=0.70.0"
 requests = "^2.27.1"
+httpx = "^0.25.1"
+pyquery = "^2.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+
+[tool.pytest.ini_options]
+addopts = "-v"
+testpaths = ["tests", "integration"]
+filterwarnings = ["ignore::DeprecationWarning"]
