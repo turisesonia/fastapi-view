@@ -1,37 +1,41 @@
-import os
+from pathlib import Path
+
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
 from . import view_request
 
+_directory: str | Path = None
+_templates: Jinja2Templates | None = None
 
-class _View(object):
-    def __init__(self):
-        self._views_directory = f"{os.path.abspath('')}/resources/views"
-        self._templates = Jinja2Templates(directory=self.views_directory)
 
-    @property
-    def templates(self):
-        return self._templates
+def init_jinja2_templates(directory: str | Path, **kwargs):
+    global _directory, _templates
 
-    @property
-    def views_directory(self):
-        return self._views_directory
+    _directory = directory
+    _templates = Jinja2Templates(directory=directory, **kwargs)
 
-    @views_directory.setter
-    def views_directory(self, views_directory: str):
-        self._views_directory = views_directory
-        self._templates = Jinja2Templates(directory=self.views_directory)
 
-    def __call__(self, view_path: str, context: dict):
-        request = view_request.get()
+def directory() -> str | Path:
+    global _directory
 
-        if not request or not isinstance(request, Request):
-            raise ValueError("request instance type must be fastapi.Request")
+    return _directory
 
-        if not view_path.endswith(".html"):
-            view_path = f"{view_path}.html"
 
-        context["request"] = request
+def view(view: str, context: dict, **kwargs) -> Jinja2Templates.TemplateResponse:
+    global _template
 
-        return self._templates.TemplateResponse(view_path, context)
+    if not _templates:
+        raise ValueError("Jinja2Templates instance is not set")
+
+    request = view_request.get()
+
+    if not request or not isinstance(request, Request):
+        raise ValueError("request instance type must be fastapi.Request")
+
+    if not view.endswith(".html"):
+        view = f"{view}.html"
+
+    context["request"] = request
+
+    return _templates.TemplateResponse(name=view, context=context, **kwargs)

@@ -11,7 +11,7 @@ def test_view_response(app):
         assert response.template.name == "index.html"
 
 
-def test_access_abount(app):
+def test_access_about(app):
     with TestClient(app) as client:
         message = "This is about page"
         response = client.get("/about", params={"message": message})

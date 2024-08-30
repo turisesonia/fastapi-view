@@ -1,18 +1,33 @@
 import os
-import pytest
-
 from datetime import datetime
 
+import pytest
+from faker import Faker
 from fastapi import FastAPI
-from fastapi_view import view, inertia
+from pytest_mock import MockerFixture
+
+from fastapi_view import inertia, init_jinja2_templates, view
 from fastapi_view.middleware import ViewRequestMiddleware
 
 
+@pytest.fixture
+def mocker(mocker: MockerFixture) -> MockerFixture:
+    return mocker
+
+
+@pytest.fixture
+def faker() -> Faker:
+    return Faker()
+
+
 @pytest.fixture()
-def app():
+def app() -> FastAPI:
     app = FastAPI(title="Test app")
-    view.views_directory = f"{os.path.abspath('tests')}/resources/views"
     app.add_middleware(ViewRequestMiddleware)
+
+    init_jinja2_templates(f"{os.path.abspath('tests')}/resources/views")
+
+    inertia.share("app_name", "Test App")
 
     @app.get("/")
     def index(name: str = "World"):
@@ -30,9 +45,6 @@ def app():
     def inertia_partial(name: str = ""):
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        return inertia.render(
-            "Partial",
-            {"now": now, "name": name},
-        )
+        return inertia.render("Partial", {"now": now, "name": name})
 
     return app

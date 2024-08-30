@@ -1,69 +1,71 @@
-import ujson
 import hashlib
+from pathlib import Path
 from typing import Any
 
+import ujson
 from fastapi.responses import JSONResponse
-from . import view, view_request
+from fastapi.templating import Jinja2Templates
+
+from fastapi_view import view_request
+from fastapi_view.view import directory, view
+
+_root_template: str = "app"
+
+_share_data: dict = {}
 
 
-class _Inertia(object):
-    def __init__(self):
-        self._root_template = "app"
-        self._share_data = {}
+def set_root_template(name: str):
+    global _root_template
 
-    @property
-    def root_template(self):
-        """The root_template property."""
-        return self._root_template
+    _root_template = name
 
-    @root_template.setter
-    def root_template(self, root_template: str):
-        self._root_template = root_template
 
-    @property
-    def share_data(self):
-        """The share_data property."""
-        return self._share_data
+def share(key: str, value: Any):
+    global _share_data
 
-    @share_data.setter
-    def share_data(self, share_data: dict):
-        self._share_data = share_data
+    _share_data[key] = value
 
-    def share(self, key: str, value: Any):
-        self._share_data[key] = value
 
-    def get_inertia_version(self):
-        root_template_file = (
-            self.root_template
-            if self.root_template.endswith(".html")
-            else f"{self.root_template}.html"
+def render(component: str, props: dict = {}) -> Jinja2Templates.TemplateResponse:
+    global _root_template, _share_data
+
+    request = view_request.get()
+    props = {**_share_data, **props}
+
+    partials = request.headers.getlist("X-Inertia-Partial-Data")
+    if partials and component == request.headers.get("X-Inertia-Partial-Component"):
+        props = {key: value for key, value in props.items() if key in partials}
+
+    page = {
+        "version": _get_inertia_version(),
+        "component": component,
+        "props": props,
+        "url": str(request.url),
+    }
+
+    if "X-Inertia" in request.headers:
+        return JSONResponse(
+            content=page, headers={"X-Inertia": "True", "Vary": "Accept"}
         )
 
-        with open(f"{view.views_directory}/{root_template_file}", "rb") as tf:
-            bytes_content = tf.read()
+    context = {"page": ujson.dumps(page)}
 
-        return hashlib.sha256(bytes_content).hexdigest()
+    return view(_root_template, context)
 
-    def render(self, component: str, props: dict = {}):
-        request = view_request.get()
-        props = {**self.share_data, **props}
 
-        partials = request.headers.getlist("X-Inertia-Partial-Data")
-        if partials and component == request.headers.get("X-Inertia-Partial-Component"):
-            props = {key: value for key, value in props.items() if key in partials}
+def _get_inertia_version() -> str:
+    global _root_template
 
-        page = {
-            "version": self.get_inertia_version(),
-            "component": component,
-            "props": props,
-            "url": str(request.url),
-        }
+    root_template_file = (
+        _root_template if _root_template.endswith(".html") else f"{_root_template}.html"
+    )
 
-        if "X-Inertia" in request.headers:
-            return JSONResponse(
-                content=page, headers={"X-Inertia": "True", "Vary": "Accept"}
-            )
+    path = Path(directory(), root_template_file)
 
-        context = {"page": ujson.dumps(page)}
+    if not path.exists():
+        raise FileNotFoundError(f"Inertia root template not found: {path}")
 
-        return view(self.root_template, context)
+    with open(path, "rb") as tf:
+        bytes_content = tf.read()
+
+    return hashlib.sha256(bytes_content).hexdigest()
