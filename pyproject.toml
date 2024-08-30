@@ -23,6 +23,8 @@ fastapi = ">=0.70.0"
 requests = "^2.27.1"
 httpx = "^0.25.1"
 pyquery = "^2.0.0"
+faker = "^28.0.0"
+pytest-mock = "^3.14.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -33,3 +35,13 @@ build-backend = "poetry.core.masonry.api"
 addopts = "-v"
 testpaths = ["tests", "integration"]
 filterwarnings = ["ignore::DeprecationWarning"]
+
+
+[tool.ruff]
+select = ["E", "F", "I", "UP"]
+target-version = "py310"
+ignore = ["UP032"]
+
+[tool.ruff.lint.pycodestyle]
+ignore-overlong-task-comments = true
+max-line-length = 300
