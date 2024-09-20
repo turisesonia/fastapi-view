@@ -4,26 +4,19 @@ from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
 from . import view_request
-
-_directory: str | Path = None
-_templates: Jinja2Templates | None = None
+from .loaders import ViewLoader
 
 
 def init_jinja2_templates(directory: str | Path, **kwargs):
-    global _directory, _templates
-
-    _directory = directory
-    _templates = Jinja2Templates(directory=directory, **kwargs)
+    ViewLoader().set_jinja2_templates(directory, **kwargs)
 
 
 def directory() -> str | Path:
-    global _directory
-
-    return _directory
+    return ViewLoader()._directory
 
 
 def view(view: str, context: dict, **kwargs) -> Jinja2Templates.TemplateResponse:
-    global _template
+    _templates = ViewLoader()._templates
 
     if not _templates:
         raise ValueError("Jinja2Templates instance is not set")
