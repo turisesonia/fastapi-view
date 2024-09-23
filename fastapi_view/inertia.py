@@ -3,7 +3,7 @@ import typing as t
 from typing import Any
 
 from fastapi import Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from fastapi_view import view_request
@@ -59,7 +59,7 @@ def share(key: str, value: Any):
     InertiaLoader().share(key, value)
 
 
-def render(component: str, props: dict = {}) -> Jinja2Templates.TemplateResponse:
+def render(component: str, props: dict = {}) -> Response:
     instance = InertiaLoader()
     request: Request = view_request.get()
 

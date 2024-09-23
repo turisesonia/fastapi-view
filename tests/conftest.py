@@ -4,9 +4,10 @@ from datetime import datetime
 import pytest
 from faker import Faker
 from fastapi import FastAPI
+from fastapi.templating import Jinja2Templates
 from pytest_mock import MockerFixture
 
-from fastapi_view import inertia, init_jinja2_templates, view
+from fastapi_view import inertia, init_fastapi_view, view
 from fastapi_view.middleware import ViewRequestMiddleware
 
 
@@ -25,7 +26,9 @@ def app() -> FastAPI:
     app = FastAPI(title="Test app")
     app.add_middleware(ViewRequestMiddleware)
 
-    init_jinja2_templates(f"{os.path.abspath('tests')}/resources/views")
+    init_fastapi_view(
+        Jinja2Templates(directory=f"{os.path.abspath('tests')}/resources/views")
+    )
 
     inertia.share("app_name", "Test App")
 

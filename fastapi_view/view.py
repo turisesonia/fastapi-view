@@ -1,9 +1,11 @@
 from pathlib import Path
 
 from fastapi import Request
+from fastapi.responses import Response
 from fastapi.templating import Jinja2Templates
 
 from . import view_request
+from .vite import Vite
 
 
 class ViewLoader:
@@ -23,16 +25,21 @@ class ViewLoader:
 
         return cls._instance
 
-    def set_jinja2_templates(self, directory: str | Path, **kwargs):
-        self._directory = directory
-        self._templates = Jinja2Templates(directory=directory, **kwargs)
+    @classmethod
+    def set_templates(cls, templates: Jinja2Templates):
+        if not isinstance(templates, Jinja2Templates):
+            raise ValueError(
+                "templates instance type must be fastapi.templating.Jinja2Templates"
+            )
+
+        cls()._templates = templates
 
 
-def init_jinja2_templates(directory: str | Path, **kwargs):
-    ViewLoader().set_jinja2_templates(directory, **kwargs)
+def init_fastapi_view(templates: Jinja2Templates):
+    ViewLoader.set_templates(templates)
 
 
-def view(view: str, context: dict, **kwargs) -> Jinja2Templates.TemplateResponse:
+def view(view: str, context: dict, **kwargs) -> Response:
     _templates = ViewLoader()._templates
 
     if not _templates:
