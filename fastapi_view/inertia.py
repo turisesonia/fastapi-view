@@ -3,8 +3,7 @@ import typing as t
 from typing import Any
 
 from fastapi import Request
-from fastapi.responses import Response, JSONResponse
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import JSONResponse, Response
 
 from fastapi_view import view_request
 from fastapi_view.view import view

@@ -5,11 +5,15 @@
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Index</title>
+  <title>Inertia Test</title>
+
+  {{ vite_hmr_client() | safe }}
+  {{ vite_asset("resources/assets/js/app.js") | safe }}
+
 </head>
 
 <body>
-  <h1>Hello World</h1>
+  <div id="app" data-page="{{ page }}"></div>
 </body>
 
 </html>

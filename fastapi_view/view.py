@@ -5,54 +5,47 @@ from fastapi.responses import Response
 from fastapi.templating import Jinja2Templates
 
 from . import view_request
-from .vite import Vite
 
 
 class ViewLoader:
-    _instance: "ViewLoader" = None
-
     _directory: str | Path = None
 
     _templates: Jinja2Templates | None = None
 
-    def __new__(cls):
-        """Singleton pattern"""
+    def __call__(self, view: str, context: dict, **kwargs) -> Response:
+        templates = self.get_templates()
 
-        if cls._instance is not None:
-            return cls._instance
+        if not templates:
+            raise ValueError("Jinja2Templates instance is not set")
 
-        cls._instance = super().__new__(cls)
+        request = view_request.get()
 
-        return cls._instance
+        if not request or not isinstance(request, Request):
+            raise ValueError("request instance type must be fastapi.Request")
 
-    @classmethod
-    def set_templates(cls, templates: Jinja2Templates):
+        context["request"] = request
+
+        if not view.endswith(".html"):
+            view = f"{view}.html"
+
+        return templates.TemplateResponse(name=view, context=context, **kwargs)
+
+    def initialize(self, templates: Jinja2Templates):
+        self.set_templates(templates)
+
+    def set_templates(self, templates: Jinja2Templates):
         if not isinstance(templates, Jinja2Templates):
             raise ValueError(
                 "templates instance type must be fastapi.templating.Jinja2Templates"
             )
 
-        cls()._templates = templates
+        self._templates = templates
+
+    def get_templates(self) -> Jinja2Templates:
+        if not self._templates:
+            raise ValueError("Jinja2Templates instance is not set")
+
+        return self._templates
 
 
-def init_fastapi_view(templates: Jinja2Templates):
-    ViewLoader.set_templates(templates)
-
-
-def view(view: str, context: dict, **kwargs) -> Response:
-    _templates = ViewLoader()._templates
-
-    if not _templates:
-        raise ValueError("Jinja2Templates instance is not set")
-
-    request = view_request.get()
-
-    if not request or not isinstance(request, Request):
-        raise ValueError("request instance type must be fastapi.Request")
-
-    if not view.endswith(".html"):
-        view = f"{view}.html"
-
-    context["request"] = request
-
-    return _templates.TemplateResponse(name=view, context=context, **kwargs)
+view = ViewLoader()

@@ -2,4 +2,5 @@ from contextvars import ContextVar
 
 view_request: ContextVar = ContextVar("view_request", default=None)
 
-from .view import init_fastapi_view, view
+from .view import view
+from .vite import Vite

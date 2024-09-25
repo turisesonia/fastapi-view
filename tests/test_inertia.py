@@ -1,14 +1,46 @@
 import json
+import os
+from datetime import datetime
 
+import pytest
+from fastapi import FastAPI
+from fastapi.templating import Jinja2Templates
 from fastapi.testclient import TestClient
 from pyquery import PyQuery as pq
+
+from fastapi_view import Vite, inertia, view
+from fastapi_view.middleware import ViewRequestMiddleware
+
+
+@pytest.fixture()
+def app() -> FastAPI:
+    app = FastAPI(title="Test app")
+    app.add_middleware(ViewRequestMiddleware)
+
+    view.initialize(
+        Jinja2Templates(directory=f"{os.path.abspath('tests')}/resources/inertia")
+    )
+
+    inertia.share("app_name", "Test App")
+
+    @app.get("/")
+    def index(name: str = ""):
+        return inertia.render("Index", {"name": name})
+
+    @app.get("/partial")
+    def partial_response(name: str = ""):
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        return inertia.render("Partial", {"now": now, "name": name})
+
+    return app
 
 
 def test_inertia_page(faker, app):
     name = faker.name()
 
     with TestClient(app) as client:
-        response = client.get("/inertia", params={"name": name})
+        response = client.get("/", params={"name": name})
 
         assert response.status_code == 200
         assert response.headers["content-type"] == "text/html; charset=utf-8"
@@ -28,9 +60,7 @@ def test_inertia_json(faker, app):
     name = faker.name()
 
     with TestClient(app) as client:
-        response = client.get(
-            "/inertia", headers={"X-Inertia": "true"}, params={"name": name}
-        )
+        response = client.get("/", headers={"X-Inertia": "true"}, params={"name": name})
 
         assert response.status_code == 200
         assert response.headers["content-type"] == "application/json"
@@ -50,7 +80,7 @@ def test_inertia_partial_json(faker, app):
 
     with TestClient(app) as client:
         response = client.get(
-            "/inertia/partial",
+            "/partial",
             headers={
                 "X-Inertia": "true",
                 "X-Inertia-Partial-Component": "Partial",
@@ -77,7 +107,7 @@ def test_inertia_share(faker, app):
     with TestClient(app) as client:
         name = faker.name()
 
-        response = client.get("/inertia", params={"name": name})
+        response = client.get("/", params={"name": name})
 
         assert response.status_code == 200
         assert response.headers["content-type"] == "text/html; charset=utf-8"

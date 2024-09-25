@@ -6,28 +6,29 @@ Features:
 
 - Simply setting and use function to return Jinja2Templates
 
-## Installation
+### Installation
 
 ```shell
 pip install fastapi-view
 ```
 
-# Usage
+### Usage
 
-- Configuring `fastapi-view` jinja2 templates directory path
+- Jinja2 templates directory setup.
 
   ```python
-  from fastapi_view import view
+  from fastapi_view import view_initialize
+  from fastapi.templating import Jinja2Templates
 
-  # setting root view templates directory path
-  view.views_directory = "/your/jinja2/template/directory/path"
+  templtes = Jinja2Templates(directory="/your/view/file/path")
+
+  view_initialize(templtes=templtes)
   ```
 
-- Use view()
+- Use `view()`
 
   ```python
   from fastapi import FastAPI
-  from fastapi.requests import Request
   from fastapi_view.middleware import ViewRequestMiddleware
   from fastapi_view import view
 
@@ -37,14 +38,12 @@ pip install fastapi-view
   @app.get("/")
   def index():
       return view("index", {"foo": "bar"})
-
   ```
 
-- Use inertia render
+- Use `inertia.render()`
 
   ```python
   from fastapi import FastAPI
-  from fastapi.requests import Request
   from fastapi_view.middleware import ViewRequestMiddleware
   from fastapi_view import inertia
 
@@ -54,5 +53,9 @@ pip install fastapi-view
   @app.get("/inertia/page")
   def inertia_index():
       return inertia.render("Index", props={"foo": "bar"})
-
   ```
+
+### Vite support
+
+```
+```
