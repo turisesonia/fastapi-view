@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from fastapi import Request
 from fastapi.responses import Response
 from fastapi.templating import Jinja2Templates
@@ -8,8 +6,6 @@ from . import view_request
 
 
 class ViewLoader:
-    _directory: str | Path = None
-
     _templates: Jinja2Templates | None = None
 
     def __call__(self, view: str, context: dict, **kwargs) -> Response:

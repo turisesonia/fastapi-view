@@ -12,7 +12,7 @@ classifiers = []
 # include = ["LICENSE"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.10"
 fastapi = ">=0.70.0"
 Jinja2 = "^3.0.0"
 pydantic-settings = "^2.5.2"
