@@ -17,45 +17,42 @@ pip install fastapi-view
 - Jinja2 templates directory setup.
 
   ```python
-  from fastapi_view import view_initialize
+  import os
+  from contextlib import asynccontextmanager
+
+  from fastapi import FastAPI
+  from fastapi.staticfiles import StaticFiles
   from fastapi.templating import Jinja2Templates
 
-  templtes = Jinja2Templates(directory="/your/view/file/path")
+  from fastapi_view import view
+  from fastapi_view.middleware import ViewRequestMiddleware
 
-  view_initialize(templtes=templtes)
+  @asynccontextmanager
+  async def lifespan(app: FastAPI):
+      view.initialize(Jinja2Templates(directory="./assets/views"), use_vite=True)
+      yield
+
+  app = FastAPI(title="Test app", lifespan=lifespan)
   ```
 
-- Use `view()`
+- Use `view()` to render Jinja2 *.html files.
 
   ```python
-  from fastapi import FastAPI
-  from fastapi_view.middleware import ViewRequestMiddleware
-  from fastapi_view import view
-
-  app = FastAPI()
-  app.add_middleware(ViewRequestMiddleware)
-
   @app.get("/")
   def index():
+      # index.html in ./assets/views
       return view("index", {"foo": "bar"})
   ```
 
-- Use `inertia.render()`
+- Use `inertia.render()` to render *.vue files.
 
   ```python
-  from fastapi import FastAPI
-  from fastapi_view.middleware import ViewRequestMiddleware
   from fastapi_view import inertia
-
-  app = FastAPI()
-  app.add_middleware(ViewRequestMiddleware)
 
   @app.get("/inertia/page")
   def inertia_index():
+      # Index.vue in ./assets/js/Pages/views
       return inertia.render("Index", props={"foo": "bar"})
   ```
 
-### Vite support
-
-```
-```
+- Find more examples in [example](./example) directory.
