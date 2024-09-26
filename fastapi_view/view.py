@@ -3,6 +3,7 @@ from fastapi.responses import Response
 from fastapi.templating import Jinja2Templates
 
 from . import view_request
+from .vite import Vite
 
 
 class ViewLoader:
@@ -26,8 +27,11 @@ class ViewLoader:
 
         return templates.TemplateResponse(name=view, context=context, **kwargs)
 
-    def initialize(self, templates: Jinja2Templates):
+    def initialize(self, templates: Jinja2Templates, use_vite: bool = False):
         self.set_templates(templates)
+
+        if use_vite:
+            Vite(templates=templates)
 
     def set_templates(self, templates: Jinja2Templates):
         if not isinstance(templates, Jinja2Templates):
@@ -38,7 +42,7 @@ class ViewLoader:
         self._templates = templates
 
     def get_templates(self) -> Jinja2Templates:
-        if not self._templates:
+        if not self._templates or not isinstance(self._templates, Jinja2Templates):
             raise ValueError("Jinja2Templates instance is not set")
 
         return self._templates

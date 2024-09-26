@@ -1,16 +1,28 @@
 import json
 import typing as t
-from typing import Any
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from fastapi_view import view_request
 from fastapi_view.view import view
 
 
-class InertiaLoader:
-    _instance: "InertiaLoader" = None
+class InertiaConfig(BaseSettings):
+    assets_version: str = ""
+
+    model_config = SettingsConfigDict(
+        extra="ignore",
+        case_sensitive=False,
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="INERTIA_",
+    )
+
+
+class inertia:
+    _instance: "inertia" = None
 
     _root_template: str = "app"
 
@@ -24,13 +36,43 @@ class InertiaLoader:
 
         return cls._instance
 
-    def set_root_template(self, root_template: str):
+    def __init__(self):
+        self.config = InertiaConfig()
+
+    @classmethod
+    def render(cls, component: str, props: dict = {}) -> Response:
+        self = cls()
+
+        request: Request = view_request.get()
+
+        page = self._get_page_object(component, request, props)
+
+        if "X-Inertia" in request.headers:
+            return JSONResponse(
+                content=page, headers={"X-Inertia": "True", "Vary": "Accept"}
+            )
+
+        return view(self._root_template, {"page": json.dumps(page)})
+
+    @classmethod
+    def set_root_template(cls, root_template: str):
+        self = cls()
+
         self._root_template = root_template
 
-    def share(self, key: str, value: t.Any):
+    @classmethod
+    def share(cls, key: str, value: t.Any):
+        self = cls()
+
         self._share[key] = value
 
-    def get_page_object(
+    @classmethod
+    def get_assets_version(cls) -> str:
+        self = cls()
+
+        return self.config.assets_version
+
+    def _get_page_object(
         self, component: str, request: Request, props: dict = {}
     ) -> dict:
         props = {**self._share, **props}
@@ -40,33 +82,8 @@ class InertiaLoader:
             props = {key: value for key, value in props.items() if key in partials}
 
         return {
-            "version": self._get_assets_version(),
+            "version": self.get_assets_version(),
             "component": component,
             "props": props,
             "url": str(request.url),
         }
-
-    def _get_assets_version(self) -> str:
-        return ""
-
-
-def set_root_template(root_template: str):
-    InertiaLoader().set_root_template(root_template)
-
-
-def share(key: str, value: Any):
-    InertiaLoader().share(key, value)
-
-
-def render(component: str, props: dict = {}) -> Response:
-    instance = InertiaLoader()
-    request: Request = view_request.get()
-
-    page = instance.get_page_object(component, request, props)
-
-    if "X-Inertia" in request.headers:
-        return JSONResponse(
-            content=page, headers={"X-Inertia": "True", "Vary": "Accept"}
-        )
-
-    return view(instance._root_template, {"page": json.dumps(page)})

@@ -8,19 +8,20 @@ from fastapi.templating import Jinja2Templates
 from fastapi.testclient import TestClient
 from pyquery import PyQuery as pq
 
-from fastapi_view import Vite, inertia, view
+from fastapi_view import inertia, view
 from fastapi_view.middleware import ViewRequestMiddleware
 
 
 @pytest.fixture()
 def app() -> FastAPI:
     app = FastAPI(title="Test app")
-    app.add_middleware(ViewRequestMiddleware)
+    app.add_middleware(ViewRequestMiddleware, use_inertia=True)
 
     view.initialize(
-        Jinja2Templates(directory=f"{os.path.abspath('tests')}/resources/inertia")
+        Jinja2Templates(directory=f"{os.path.abspath('tests')}/resources/views")
     )
 
+    inertia.set_root_template("inertia.html")
     inertia.share("app_name", "Test App")
 
     @app.get("/")
@@ -44,7 +45,7 @@ def test_inertia_page(faker, app):
 
         assert response.status_code == 200
         assert response.headers["content-type"] == "text/html; charset=utf-8"
-        assert response.template.name == "app.html"
+        assert response.template.name == "inertia.html"
 
         d = pq(response.text)
         h = d("#app")
@@ -111,7 +112,7 @@ def test_inertia_share(faker, app):
 
         assert response.status_code == 200
         assert response.headers["content-type"] == "text/html; charset=utf-8"
-        assert response.template.name == "app.html"
+        assert response.template.name == "inertia.html"
 
         d = pq(response.text)
         h = d("#app")
@@ -122,3 +123,20 @@ def test_inertia_share(faker, app):
         assert data_page["component"] == "Index"
         assert data_page["props"]["name"] == name
         assert data_page["props"]["app_name"] == "Test App"
+
+
+def test_inertia_version_outdated(faker, app):
+    os.environ["INERTIA_ASSETS_VERSION"] = "test.version"
+
+    name = "testname"
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/", params={"name": name}, headers={"X-Inertia-Version": "2234"}
+        )
+
+        assert response.status_code == 409
+        assert "x-inertia-location" in response.headers
+        assert (
+            response.headers["x-inertia-location"] == f"{client.base_url}/?name={name}"
+        )
