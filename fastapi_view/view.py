@@ -1,37 +1,51 @@
-import os
 from fastapi import Request
+from fastapi.responses import Response
 from fastapi.templating import Jinja2Templates
 
 from . import view_request
+from .vite import Vite
 
 
-class _View(object):
-    def __init__(self):
-        self._views_directory = f"{os.path.abspath('')}/resources/views"
-        self._templates = Jinja2Templates(directory=self.views_directory)
+class ViewLoader:
+    _templates: Jinja2Templates | None = None
 
-    @property
-    def templates(self):
-        return self._templates
+    def __call__(self, view: str, context: dict, **kwargs) -> Response:
+        templates = self.get_templates()
 
-    @property
-    def views_directory(self):
-        return self._views_directory
+        if not templates:
+            raise ValueError("Jinja2Templates instance is not set")
 
-    @views_directory.setter
-    def views_directory(self, views_directory: str):
-        self._views_directory = views_directory
-        self._templates = Jinja2Templates(directory=self.views_directory)
-
-    def __call__(self, view_path: str, context: dict):
         request = view_request.get()
 
         if not request or not isinstance(request, Request):
             raise ValueError("request instance type must be fastapi.Request")
 
-        if not view_path.endswith(".html"):
-            view_path = f"{view_path}.html"
-
         context["request"] = request
 
-        return self._templates.TemplateResponse(view_path, context)
+        if not view.endswith(".html"):
+            view = f"{view}.html"
+
+        return templates.TemplateResponse(name=view, context=context, **kwargs)
+
+    def initialize(self, templates: Jinja2Templates, use_vite: bool = False):
+        self.set_templates(templates)
+
+        if use_vite:
+            Vite(templates=templates)
+
+    def set_templates(self, templates: Jinja2Templates):
+        if not isinstance(templates, Jinja2Templates):
+            raise ValueError(
+                "templates instance type must be fastapi.templating.Jinja2Templates"
+            )
+
+        self._templates = templates
+
+    def get_templates(self) -> Jinja2Templates:
+        if not self._templates or not isinstance(self._templates, Jinja2Templates):
+            raise ValueError("Jinja2Templates instance is not set")
+
+        return self._templates
+
+
+view = ViewLoader()

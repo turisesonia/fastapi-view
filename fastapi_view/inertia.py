@@ -1,69 +1,89 @@
-import ujson
-import hashlib
-from typing import Any
+import json
+import typing as t
 
-from fastapi.responses import JSONResponse
-from . import view, view_request
+from fastapi import Request
+from fastapi.responses import JSONResponse, Response
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from fastapi_view import view_request
+from fastapi_view.view import view
 
 
-class _Inertia(object):
+class InertiaConfig(BaseSettings):
+    assets_version: str = ""
+
+    model_config = SettingsConfigDict(
+        extra="ignore",
+        case_sensitive=False,
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="INERTIA_",
+    )
+
+
+class inertia:
+    _instance: "inertia" = None
+
+    _root_template: str = "app"
+
+    _share: dict = {}
+
+    def __new__(cls):
+        if cls._instance is not None:
+            return cls._instance
+
+        cls._instance = super().__new__(cls)
+
+        return cls._instance
+
     def __init__(self):
-        self._root_template = "app"
-        self._share_data = {}
+        self.config = InertiaConfig()
 
-    @property
-    def root_template(self):
-        """The root_template property."""
-        return self._root_template
+    @classmethod
+    def render(cls, component: str, props: dict = {}) -> Response:
+        self = cls()
 
-    @root_template.setter
-    def root_template(self, root_template: str):
-        self._root_template = root_template
+        request: Request = view_request.get()
 
-    @property
-    def share_data(self):
-        """The share_data property."""
-        return self._share_data
-
-    @share_data.setter
-    def share_data(self, share_data: dict):
-        self._share_data = share_data
-
-    def share(self, key: str, value: Any):
-        self._share_data[key] = value
-
-    def get_inertia_version(self):
-        root_template_file = (
-            self.root_template
-            if self.root_template.endswith(".html")
-            else f"{self.root_template}.html"
-        )
-
-        with open(f"{view.views_directory}/{root_template_file}", "rb") as tf:
-            bytes_content = tf.read()
-
-        return hashlib.sha256(bytes_content).hexdigest()
-
-    def render(self, component: str, props: dict = {}):
-        request = view_request.get()
-        props = {**self.share_data, **props}
-
-        partials = request.headers.getlist("X-Inertia-Partial-Data")
-        if partials and component == request.headers.get("X-Inertia-Partial-Component"):
-            props = {key: value for key, value in props.items() if key in partials}
-
-        page = {
-            "version": self.get_inertia_version(),
-            "component": component,
-            "props": props,
-            "url": str(request.url),
-        }
+        page = self._get_page_object(component, request, props)
 
         if "X-Inertia" in request.headers:
             return JSONResponse(
                 content=page, headers={"X-Inertia": "True", "Vary": "Accept"}
             )
 
-        context = {"page": ujson.dumps(page)}
+        return view(self._root_template, {"page": json.dumps(page)})
 
-        return view(self.root_template, context)
+    @classmethod
+    def set_root_template(cls, root_template: str):
+        self = cls()
+
+        self._root_template = root_template
+
+    @classmethod
+    def share(cls, key: str, value: t.Any):
+        self = cls()
+
+        self._share[key] = value
+
+    @classmethod
+    def get_assets_version(cls) -> str:
+        self = cls()
+
+        return self.config.assets_version
+
+    def _get_page_object(
+        self, component: str, request: Request, props: dict = {}
+    ) -> dict:
+        props = {**self._share, **props}
+
+        partials = request.headers.getlist("X-Inertia-Partial-Data")
+        if partials and component == request.headers.get("X-Inertia-Partial-Component"):
+            props = {key: value for key, value in props.items() if key in partials}
+
+        return {
+            "version": self.get_assets_version(),
+            "component": component,
+            "props": props,
+            "url": str(request.url),
+        }

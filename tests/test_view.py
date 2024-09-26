@@ -1,5 +1,35 @@
+import os
+
+import pytest
+from fastapi import FastAPI
+from fastapi.templating import Jinja2Templates
 from fastapi.testclient import TestClient
 from pyquery import PyQuery as pq
+
+from fastapi_view import inertia, view
+from fastapi_view.middleware import ViewRequestMiddleware
+
+
+@pytest.fixture()
+def app() -> FastAPI:
+    app = FastAPI(title="Test app")
+    app.add_middleware(ViewRequestMiddleware)
+
+    view.initialize(
+        Jinja2Templates(directory=f"{os.path.abspath('tests')}/resources/views")
+    )
+
+    inertia.share("app_name", "Test App")
+
+    @app.get("/")
+    def index(name: str = "World"):
+        return view("index", {"name": name})
+
+    @app.get("/about")
+    def about(message: str = "Hello World"):
+        return view("about", {"message": message})
+
+    return app
 
 
 def test_view_response(app):
@@ -11,7 +41,7 @@ def test_view_response(app):
         assert response.template.name == "index.html"
 
 
-def test_access_abount(app):
+def test_access_about(app):
     with TestClient(app) as client:
         message = "This is about page"
         response = client.get("/about", params={"message": message})

@@ -1,0 +1,27 @@
+{
+  "assets/js/Pages/About.vue": {
+    "file": "assets/About-e03ff8dc.js",
+    "imports": [
+      "assets/js/app.js"
+    ],
+    "isDynamicEntry": true,
+    "src": "assets/js/Pages/About.vue"
+  },
+  "assets/js/Pages/Index.vue": {
+    "file": "assets/Index-0935b5ab.js",
+    "imports": [
+      "assets/js/app.js"
+    ],
+    "isDynamicEntry": true,
+    "src": "assets/js/Pages/Index.vue"
+  },
+  "assets/js/app.js": {
+    "dynamicImports": [
+      "assets/js/Pages/About.vue",
+      "assets/js/Pages/Index.vue"
+    ],
+    "file": "assets/app-b5a2f0c5.js",
+    "isEntry": true,
+    "src": "assets/js/app.js"
+  }
+}

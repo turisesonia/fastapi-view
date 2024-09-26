@@ -139,6 +139,6 @@ dmypy.json
 cython_debug/
 
 config/deploy/*
-poetry.lock
-
 node_modules
+
+!example/dist
