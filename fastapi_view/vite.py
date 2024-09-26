@@ -58,6 +58,8 @@ class ViteConfig(BaseSettings):
 
 
 class Vite:
+    _manifest: dict = None
+
     def __init__(self, templates: Jinja2Templates):
         self.config = ViteConfig()
 
