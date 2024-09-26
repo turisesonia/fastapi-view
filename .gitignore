@@ -140,3 +140,5 @@ cython_debug/
 
 config/deploy/*
 node_modules
+
+!example/dist
