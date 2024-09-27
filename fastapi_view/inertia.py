@@ -24,6 +24,8 @@ class InertiaConfig(BaseSettings):
 class inertia:
     _instance: "inertia" = None
 
+    _config: InertiaConfig = None
+
     _root_template: str = "app"
 
     _share: dict = {}
@@ -37,7 +39,8 @@ class inertia:
         return cls._instance
 
     def __init__(self):
-        self.config = InertiaConfig()
+        if not self._config:
+            self._config = InertiaConfig()
 
     @classmethod
     def render(cls, component: str, props: dict = {}) -> Response:
@@ -70,7 +73,7 @@ class inertia:
     def get_assets_version(cls) -> str:
         self = cls()
 
-        return self.config.assets_version
+        return self._config.assets_version
 
     def _get_page_object(
         self, component: str, request: Request, props: dict = {}
