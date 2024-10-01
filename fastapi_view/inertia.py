@@ -3,6 +3,7 @@ import typing as t
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
+from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from fastapi_view import view_request
@@ -19,6 +20,10 @@ class InertiaConfig(BaseSettings):
         env_file_encoding="utf-8",
         env_prefix="INERTIA_",
     )
+
+
+class InertiaPageProps(BaseModel):
+    data: t.Any = {}
 
 
 class inertia:
@@ -43,19 +48,21 @@ class inertia:
             self._config = InertiaConfig()
 
     @classmethod
-    def render(cls, component: str, props: dict = {}) -> Response:
+    def render(cls, component: str, props: dict = None) -> Response:
         self = cls()
 
         request: Request = view_request.get()
 
-        page = self._get_page_object(component, request, props)
+        page_props = self._get_page_props(component, request, props or {})
+
+        data = page_props.model_dump(mode="json").get("data", {})
 
         if "X-Inertia" in request.headers:
             return JSONResponse(
-                content=page, headers={"X-Inertia": "True", "Vary": "Accept"}
+                content=data, headers={"X-Inertia": "True", "Vary": "Accept"}
             )
 
-        return view(self._root_template, {"page": json.dumps(page)})
+        return view(self._root_template, {"page": json.dumps(data)})
 
     @classmethod
     def set_root_template(cls, root_template: str):
@@ -75,18 +82,19 @@ class inertia:
 
         return self._config.assets_version
 
-    def _get_page_object(
-        self, component: str, request: Request, props: dict = {}
-    ) -> dict:
-        props = {**self._share, **props}
-
+    def _get_page_props(
+        self, component: str, request: Request, props: dict
+    ) -> InertiaPageProps:
         partials = request.headers.getlist("X-Inertia-Partial-Data")
+
         if partials and component == request.headers.get("X-Inertia-Partial-Component"):
             props = {key: value for key, value in props.items() if key in partials}
 
-        return {
-            "version": self.get_assets_version(),
-            "component": component,
-            "props": props,
-            "url": str(request.url),
-        }
+        return InertiaPageProps(
+            data={
+                "version": self.get_assets_version(),
+                "component": component,
+                "props": {**self._share, **props},
+                "url": str(request.url),
+            }
+        )

@@ -6,14 +6,21 @@ import pytest
 from fastapi import FastAPI
 from fastapi.templating import Jinja2Templates
 from fastapi.testclient import TestClient
+from pydantic import BaseModel
 from pyquery import PyQuery as pq
 
 from fastapi_view import inertia, view
 from fastapi_view.middleware import ViewRequestMiddleware
 
 
+class Item(BaseModel):
+    name: str
+    time: datetime = datetime.now()
+    description: str = None
+
+
 @pytest.fixture()
-def app() -> FastAPI:
+def app(faker) -> FastAPI:
     app = FastAPI(title="Test app")
     app.add_middleware(ViewRequestMiddleware, use_inertia=True)
 
@@ -33,6 +40,18 @@ def app() -> FastAPI:
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         return inertia.render("Partial", {"now": now, "name": name})
+
+    @app.get("/items")
+    def items():
+        items = [
+            Item(
+                name=faker.name(),
+                description=faker.text(),
+            )
+            for _ in range(5)
+        ]
+
+        return inertia.render("Item", {"items": items})
 
     return app
 
@@ -125,7 +144,7 @@ def test_inertia_share(faker, app):
         assert data_page["props"]["app_name"] == "Test App"
 
 
-def test_inertia_version_outdated(faker, app):
+def test_inertia_version_outdated(app):
     os.environ["INERTIA_ASSETS_VERSION"] = "test.version"
 
     name = "testname"
@@ -140,3 +159,16 @@ def test_inertia_version_outdated(faker, app):
         assert (
             response.headers["x-inertia-location"] == f"{client.base_url}/?name={name}"
         )
+
+
+def test_inertia_response_with_pydantic(faker, app):
+    with TestClient(app) as client:
+        response = client.get("/items", headers={"X-Inertia": "true"})
+
+        data = response.json()
+        items = data["props"]["items"]
+
+        assert isinstance(items, list)
+
+        for item in items:
+            assert isinstance(item, dict)
