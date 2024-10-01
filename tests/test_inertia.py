@@ -43,15 +43,20 @@ def app(faker) -> FastAPI:
 
     @app.get("/items")
     def items():
-        items = [
-            Item(
-                name=faker.name(),
-                description=faker.text(),
-            )
-            for _ in range(5)
-        ]
+        items = (Item(name=faker.name(), description=faker.text()) for _ in range(5))
 
         return inertia.render("Item", {"items": items})
+
+    @app.get("/lazy")
+    def lazy():
+        return inertia.render(
+            "Index",
+            {
+                "name": "name",
+                "items": inertia.lazy(lambda: [1, 2, 3, 4, 5]),
+                "title": lambda: "Title",
+            },
+        )
 
     return app
 
@@ -172,3 +177,36 @@ def test_inertia_response_with_pydantic(faker, app):
 
         for item in items:
             assert isinstance(item, dict)
+
+
+def test_inertia_lazy(faker, app):
+    with TestClient(app) as client:
+        response = client.get(
+            "/lazy",
+            headers={
+                "X-Inertia": "true",
+                "X-Inertia-Partial-Component": "Index",
+                "X-Inertia-Partial-Data": "items",
+            },
+        )
+
+        data = response.json()
+
+        assert data["component"] == "Index"
+        assert data["props"]["items"] == [1, 2, 3, 4, 5]
+        assert "title" not in data["props"]
+
+        response = client.get(
+            "/lazy",
+            headers={
+                "X-Inertia": "true",
+                "X-Inertia-Partial-Component": "Index",
+                "X-Inertia-Partial-Data": "items,title",
+            },
+        )
+
+        data = response.json()
+
+        assert data["component"] == "Index"
+        assert data["props"]["items"] == [1, 2, 3, 4, 5]
+        assert data["props"]["title"] == "Title"
