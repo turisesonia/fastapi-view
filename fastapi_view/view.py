@@ -7,6 +7,8 @@ from .vite import Vite
 
 
 class ViewLoader:
+    _vite: Vite = None
+
     _templates: Jinja2Templates | None = None
 
     def __call__(self, view: str, context: dict, **kwargs) -> Response:
@@ -31,7 +33,7 @@ class ViewLoader:
         self.set_templates(templates)
 
         if use_vite:
-            Vite(templates=templates)
+            self._vite = Vite(templates=templates)
 
     def set_templates(self, templates: Jinja2Templates):
         if not isinstance(templates, Jinja2Templates):

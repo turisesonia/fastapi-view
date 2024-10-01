@@ -16,16 +16,21 @@ python = "^3.10"
 fastapi = ">=0.70.0"
 Jinja2 = "^3.0.0"
 pydantic-settings = "^2.5.2"
+pydantic = ">=2.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"
-fastapi = ">=0.70.0"
+fastapi = {extras = ["standard"], version = "^0.115.0"}
 requests = "^2.27.1"
 httpx = "^0.25.1"
 pyquery = "^2.0.0"
 faker = "^28.0.0"
 pytest-mock = "^3.14.0"
 uvicorn = "^0.30.6"
+poethepoet = "^0.29.0"
+
+[tool.poe.tasks]
+dev = "uvicorn example.main:app --reload"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

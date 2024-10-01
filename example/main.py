@@ -9,6 +9,8 @@ from fastapi.templating import Jinja2Templates
 from fastapi_view import inertia, view
 from fastapi_view.middleware import ViewRequestMiddleware
 
+from .schemas import Item
+
 EXAMPLE_APP_PATH = os.path.abspath("example")
 
 os.environ["VITE_MANIFEST_PATH"] = Path(
@@ -40,3 +42,16 @@ def index():
 @app.get("/about")
 def about():
     return inertia.render("About")
+
+
+@app.get("/items")
+def items():
+    items = (
+        Item(
+            name=f"item-{n}",
+            description=f"description-{n}",
+        )
+        for n in range(5)
+    )
+
+    return inertia.render("Item", props={"items": items})

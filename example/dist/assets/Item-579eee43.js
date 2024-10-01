@@ -1,0 +1,1 @@
+import{o as e,c as t,a as r,F as u,r as o,t as l}from"./app-d4b4ffc4.js";const m={__name:"Item",props:{items:{type:Array,default(){return[]}}},setup(s){return(p,n)=>(e(),t("div",null,[n[0]||(n[0]=r("h1",null,"Item",-1)),(e(!0),t(u,null,o(s.items,a=>(e(),t("div",null,[r("p",null,l(a.name),1),r("p",null,l(a.description),1)]))),256))]))}};export{m as default};
