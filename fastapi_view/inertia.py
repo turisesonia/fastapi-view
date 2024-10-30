@@ -1,26 +1,17 @@
 import json
 import typing as t
 
-from fastapi import Request
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from fastapi_view import view_request
+from fastapi_view.config import inertia_config
 from fastapi_view.enums import Header
+from fastapi_view.middlewares.inertia_request import InertiaRequestMiddleware
 from fastapi_view.view import view
-
-
-class InertiaConfig(BaseSettings):
-    assets_version: str = ""
-
-    model_config = SettingsConfigDict(
-        extra="ignore",
-        case_sensitive=False,
-        env_file=".env",
-        env_file_encoding="utf-8",
-        env_prefix="INERTIA_",
-    )
+from fastapi_view.vite import Vite
 
 
 class InertiaPageProps(BaseModel):
@@ -38,8 +29,6 @@ class LazyProp:
 class inertia:
     _instance: "inertia" = None
 
-    _config: InertiaConfig = None
-
     _root_template: str = "app"
 
     _share: dict = {}
@@ -51,10 +40,6 @@ class inertia:
         cls._instance = super().__new__(cls)
 
         return cls._instance
-
-    def __init__(self):
-        if not self._config:
-            self._config = InertiaConfig()
 
     @classmethod
     def render(cls, component: str, props: dict = None) -> Response:
@@ -83,12 +68,6 @@ class inertia:
 
         self._share[key] = value
 
-    @classmethod
-    def get_assets_version(cls) -> str:
-        self = cls()
-
-        return self._config.assets_version
-
     @staticmethod
     def lazy(prop: t.Any):
         return LazyProp(prop)
@@ -116,7 +95,7 @@ class inertia:
         return (
             InertiaPageProps(
                 data={
-                    "version": self.get_assets_version(),
+                    "version": inertia_config.assets_version,
                     "component": component,
                     "props": {**self._share, **props},
                     "url": str(request.url),
@@ -144,3 +123,30 @@ class inertia:
                 ...
 
         return props
+
+
+def setup_inertia_app(
+    app: FastAPI,
+    root_template: str = "app",
+    templates: Jinja2Templates = None,
+    use_vite: bool = False,
+) -> FastAPI:
+    if not view._templates:
+        if not templates:
+            raise ValueError("Jinja2Templates is not set")
+
+        if templates and not isinstance(templates, Jinja2Templates):
+            raise ValueError(
+                "templates object type must be fastapi.templating.Jinja2Templates"
+            )
+
+        view.initialize(templates=templates)
+
+    inertia.set_root_template(root_template)
+
+    app.add_middleware(InertiaRequestMiddleware)
+
+    if use_vite:
+        vite = Vite(templates=view.get_templates())
+
+    return app

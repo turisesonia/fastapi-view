@@ -1,26 +1,31 @@
-from fastapi import Request
+import typing as t
+
+from fastapi import FastAPI, Request
 from fastapi.responses import Response
 from fastapi.templating import Jinja2Templates
 
 from . import view_request
+from .middlewares.view_request import ViewRequestMiddleware
 from .vite import Vite
 
 
 class ViewLoader:
     _vite: Vite = None
 
-    _templates: Jinja2Templates | None = None
+    _templates: t.Optional[Jinja2Templates] = None
 
-    def __call__(self, view: str, context: dict, **kwargs) -> Response:
+    def __call__(self, view: str, context: dict = None, **kwargs) -> Response:
         templates = self.get_templates()
 
         if not templates:
             raise ValueError("Jinja2Templates instance is not set")
 
         request = view_request.get()
-
         if not request or not isinstance(request, Request):
             raise ValueError("request instance type must be fastapi.Request")
+
+        if not context:
+            context = {}
 
         context["request"] = request
 
@@ -29,11 +34,8 @@ class ViewLoader:
 
         return templates.TemplateResponse(name=view, context=context, **kwargs)
 
-    def initialize(self, templates: Jinja2Templates, use_vite: bool = False):
+    def initialize(self, templates: Jinja2Templates):
         self.set_templates(templates)
-
-        if use_vite:
-            self._vite = Vite(templates=templates)
 
     def set_templates(self, templates: Jinja2Templates):
         if not isinstance(templates, Jinja2Templates):
@@ -51,3 +53,11 @@ class ViewLoader:
 
 
 view = ViewLoader()
+
+
+def view_setup(app: FastAPI, templates: Jinja2Templates) -> FastAPI:
+    view.initialize(templates=templates)
+
+    app.add_middleware(ViewRequestMiddleware)
+
+    return app

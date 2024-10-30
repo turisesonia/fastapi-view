@@ -6,20 +6,15 @@ from fastapi.templating import Jinja2Templates
 from fastapi.testclient import TestClient
 from pyquery import PyQuery as pq
 
-from fastapi_view import inertia, view
-from fastapi_view.middleware import ViewRequestMiddleware
+from fastapi_view import view, view_setup
 
 
 @pytest.fixture()
 def app() -> FastAPI:
-    app = FastAPI(title="Test app")
-    app.add_middleware(ViewRequestMiddleware)
-
-    view.initialize(
-        Jinja2Templates(directory=f"{os.path.abspath('tests')}/resources/views")
+    app = view_setup(
+        FastAPI(title="Test app"),
+        Jinja2Templates(directory=f"{os.path.abspath('tests')}/resources/views"),
     )
-
-    inertia.share("app_name", "Test App")
 
     @app.get("/")
     def index(name: str = "World"):

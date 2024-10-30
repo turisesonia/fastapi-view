@@ -2,11 +2,11 @@ from fastapi import Request
 from starlette.responses import PlainTextResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from . import view_request
-from .inertia import inertia
+from .. import view_request
+from ..config import inertia_config
 
 
-class ViewRequestMiddleware:
+class InertiaRequestMiddleware:
     def __init__(self, app: ASGIApp, use_inertia: bool = False) -> None:
         self.app = app
 
@@ -35,14 +35,10 @@ class ViewRequestMiddleware:
             view_request.reset(token)
 
     def inertia_is_outdated(self, request: Request) -> bool:
-        assets_version = inertia.get_assets_version()
+        assets_version = inertia_config.assets_version
 
         # Check if the asset version is the same as the one in the request.
-        if (
-            self.use_inertia
-            and request.headers.get("X-Inertia-Version", assets_version)
-            != assets_version
-        ):
+        if request.headers.get("X-Inertia-Version", assets_version) != assets_version:
             return True
 
         return False

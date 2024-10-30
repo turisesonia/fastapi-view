@@ -20,7 +20,7 @@ pydantic = ">=2.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"
-fastapi = {extras = ["standard"], version = "^0.115.0"}
+fastapi = { extras = ["standard"], version = "^0.115.0" }
 requests = "^2.27.1"
 httpx = "^0.25.1"
 pyquery = "^2.0.0"
@@ -46,7 +46,7 @@ filterwarnings = ["ignore::DeprecationWarning"]
 [tool.ruff]
 select = ["E", "F", "I", "UP"]
 target-version = "py310"
-ignore = ["UP032"]
+ignore = ["UP032", "UP007"]
 
 [tool.ruff.lint.pycodestyle]
 ignore-overlong-task-comments = true

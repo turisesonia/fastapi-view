@@ -9,8 +9,7 @@ from fastapi.testclient import TestClient
 from pydantic import BaseModel
 from pyquery import PyQuery as pq
 
-from fastapi_view import inertia, view
-from fastapi_view.middleware import ViewRequestMiddleware
+from fastapi_view import inertia, setup_inertia_app
 
 
 class Item(BaseModel):
@@ -21,14 +20,14 @@ class Item(BaseModel):
 
 @pytest.fixture()
 def app(faker) -> FastAPI:
-    app = FastAPI(title="Test app")
-    app.add_middleware(ViewRequestMiddleware, use_inertia=True)
-
-    view.initialize(
-        Jinja2Templates(directory=f"{os.path.abspath('tests')}/resources/views")
+    app = setup_inertia_app(
+        FastAPI(title="Test app"),
+        root_template="inertia.html",
+        templates=Jinja2Templates(
+            directory=f"{os.path.abspath('tests')}/resources/views"
+        ),
     )
 
-    inertia.set_root_template("inertia.html")
     inertia.share("app_name", "Test App")
 
     @app.get("/")

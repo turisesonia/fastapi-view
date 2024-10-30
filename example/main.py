@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from fastapi_view import inertia, view
-from fastapi_view.middleware import ViewRequestMiddleware
+from fastapi_view.middlewares.view_request import ViewRequestMiddleware
 
 from .schemas import Item
 
