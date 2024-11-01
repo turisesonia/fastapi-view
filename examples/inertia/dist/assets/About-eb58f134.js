@@ -1,0 +1,1 @@
+import{o,c as a,a as t}from"./app-13b3b412.js";const n={__name:"About",props:{},setup(s){return(r,e)=>(o(),a("div",null,e[0]||(e[0]=[t("h1",null,"About",-1),t("p",null,"This is the about page",-1)])))}};export{n as default};

@@ -1,20 +1,22 @@
-import os
+from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
 from fastapi.templating import Jinja2Templates
 from fastapi.testclient import TestClient
+from jinja2 import Template
 from pyquery import PyQuery as pq
 
-from fastapi_view import view, view_setup
+from fastapi_view import view
 
 
 @pytest.fixture()
-def app() -> FastAPI:
-    app = view_setup(
-        FastAPI(title="Test app"),
-        Jinja2Templates(directory=f"{os.path.abspath('tests')}/resources/views"),
-    )
+def app(tests_path: Path) -> FastAPI:
+    app = FastAPI(title="Test app")
+
+    directory = Path(tests_path, "resources/views")
+
+    view.setup(app, directory=directory)
 
     @app.get("/")
     def index(name: str = "World"):
@@ -25,6 +27,17 @@ def app() -> FastAPI:
         return view("about", {"message": message})
 
     return app
+
+
+def test_setup(tests_path: Path):
+    app = FastAPI(title="Test app")
+    directory = Path(tests_path, "resources/views")
+
+    view.setup(app, directory)
+
+    assert isinstance(view.templates, Jinja2Templates)
+    assert isinstance(view.templates.get_template("index.html"), Template)
+    assert app.user_middleware is not None
 
 
 def test_view_response(app):

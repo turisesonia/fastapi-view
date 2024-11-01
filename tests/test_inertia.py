@@ -1,15 +1,15 @@
 import json
 import os
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
-from fastapi.templating import Jinja2Templates
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 from pyquery import PyQuery as pq
 
-from fastapi_view import inertia, setup_inertia_app
+from fastapi_view import inertia
 
 
 class Item(BaseModel):
@@ -19,36 +19,41 @@ class Item(BaseModel):
 
 
 @pytest.fixture()
-def app(faker) -> FastAPI:
-    app = setup_inertia_app(
-        FastAPI(title="Test app"),
+def directory(tests_path: Path) -> Path:
+    return tests_path / "resources/views"
+
+
+@pytest.fixture()
+def app(faker, directory: Path) -> FastAPI:
+    app = FastAPI(title="Test app")
+
+    inertia.setup(
+        app=app,
+        directory=directory,
         root_template="inertia.html",
-        templates=Jinja2Templates(
-            directory=f"{os.path.abspath('tests')}/resources/views"
-        ),
     )
 
     inertia.share("app_name", "Test App")
 
     @app.get("/")
     def index(name: str = ""):
-        return inertia.render("Index", {"name": name})
+        return inertia("Index", {"name": name})
 
     @app.get("/partial")
     def partial_response(name: str = ""):
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        return inertia.render("Partial", {"now": now, "name": name})
+        return inertia("Partial", {"now": now, "name": name})
 
     @app.get("/items")
     def items():
         items = (Item(name=faker.name(), description=faker.text()) for _ in range(5))
 
-        return inertia.render("Item", {"items": items})
+        return inertia("Item", {"items": items})
 
     @app.get("/lazy")
     def lazy():
-        return inertia.render(
+        return inertia(
             "Index",
             {
                 "name": "name",

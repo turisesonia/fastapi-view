@@ -1,0 +1,1 @@
+import{o,c as r,a as t}from"./app-13b3b412.js";const s={__name:"Index",props:{},setup(a){return(n,e)=>(o(),r("div",null,e[0]||(e[0]=[t("h1",null,"Welcome to your Inertia app!",-1)])))}};export{s as default};

@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 import pytest
 from faker import Faker
 from pytest_mock import MockerFixture
@@ -11,3 +14,8 @@ def mocker(mocker: MockerFixture) -> MockerFixture:
 @pytest.fixture
 def faker() -> Faker:
     return Faker()
+
+
+@pytest.fixture
+def tests_path() -> Path:
+    return Path(os.path.abspath("tests"))
