@@ -7,7 +7,7 @@ const { resolve } = require('path');
 export default defineConfig({
     resolve: {
         alias: {
-            '@': resolve('./assets/js'),
+            '@': resolve('/resources/assets'),
         },
     },
 
