@@ -1,3 +1,4 @@
+import copy
 import os
 from pathlib import Path
 
@@ -19,3 +20,10 @@ def faker() -> Faker:
 @pytest.fixture
 def tests_path() -> Path:
     return Path(os.path.abspath("tests"))
+
+
+@pytest.fixture(autouse=True)
+def reset_env():
+    env = copy.deepcopy(os.environ)
+    yield
+    os.environ = env

@@ -6,7 +6,7 @@ from urllib.parse import urljoin
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import computed_field, field_validator
+from pydantic import computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -54,6 +54,18 @@ class ViteConfig(BaseSettings):
             dev_server_url=self.dev_server_url,
             ws_client_path=self.ws_client_path,
         )
+
+    @model_validator(mode="after")
+    def check_dev_mode(cls, values: "ViteConfig"):
+        dev_mode = values.dev_mode
+
+        if not dev_mode:
+            if not values.static_url and not values.dist_uri_prefix:
+                raise ValueError(
+                    "static_url or dist_uri_prefix must be set in production mode"
+                )
+
+        return values
 
     @field_validator("dist_uri_prefix")
     @classmethod

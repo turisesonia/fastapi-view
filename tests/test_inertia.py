@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from pyquery import PyQuery as pq
 
 from fastapi_view import inertia
+from fastapi_view.vite import Vite
 
 
 class Item(BaseModel):
@@ -63,6 +64,22 @@ def app(faker, directory: Path) -> FastAPI:
         )
 
     return app
+
+
+def test_inertia_setup(directory: Path):
+    os.environ["VITE_DEV_MODE"] = "True"
+
+    app = FastAPI(title="Test app")
+
+    inertia.setup(
+        app=app,
+        directory=directory,
+        root_template="inertia.html",
+        use_vite=True,
+    )
+
+    assert inertia._root_template == "inertia.html"
+    assert isinstance(inertia._vite, Vite)
 
 
 def test_inertia_page(faker, app):
