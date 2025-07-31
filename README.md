@@ -35,7 +35,7 @@ pip install fastapi-view
   app = FastAPI(title="Test app", lifespan=lifespan)
   ```
 
-- Use `view()` to render Jinja2 *.html files.
+- Use `view()` to render Jinja2 \*.html files.
 
   ```python
   @app.get("/")
@@ -44,7 +44,7 @@ pip install fastapi-view
       return view("index", {"foo": "bar"})
   ```
 
-- Use `inertia.render()` to render *.vue files.
+- Use `inertia.render()` to render \*.vue files.
 
   ```python
   from fastapi_view import inertia

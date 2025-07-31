@@ -1,52 +1,51 @@
+import typing
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import Request
 from fastapi.responses import Response
 from fastapi.templating import Jinja2Templates
-
-from . import view_request
-from .middlewares.view_request import ViewRequestMiddleware
+from starlette.background import BackgroundTask
 
 
 class View:
-    _templates: Jinja2Templates = None
+    def __init__(self, templates: Jinja2Templates, request: Request):
+        if not isinstance(templates, Jinja2Templates):
+            raise TypeError("templates must be an instance of Jinja2Templates")
 
-    @property
-    def templates(self):
-        return self._templates
-
-    def setup(self, app: FastAPI, directory, handle_middleware: bool = True) -> None:
-        self._handle_templates(directory)
-
-        if handle_middleware:
-            self._handle_middleware(app)
-
-    def _handle_templates(self, directory) -> None:
-        if isinstance(directory, str):
-            directory = Path(directory)
-
-        if not directory.exists():
-            raise FileNotFoundError(f"Directory not found: {directory}")
-
-        self._templates = Jinja2Templates(directory=directory)
-
-    def _handle_middleware(self, app: FastAPI) -> None:
-        app.add_middleware(ViewRequestMiddleware)
-
-    def __call__(self, view: str, context: dict = None, **kwargs) -> Response:
-        if not self.templates or not isinstance(self.templates, Jinja2Templates):
-            raise ValueError("Jinja2Templates instance is not set")
-
-        request = view_request.get()
-        if not request or not isinstance(request, Request):
+        if not isinstance(request, Request):
             raise ValueError("request instance type must be fastapi.Request")
 
+        self.templates = templates
+        self.request = request
+
+    def render(
+        self,
+        view: str,
+        context: dict | None = None,
+        status_code: int = 200,
+        headers: typing.Mapping[str, str] | None = None,
+        media_type: str | None = None,
+        background: BackgroundTask | None = None,
+    ) -> Response:
         if not view.endswith(".html"):
             view = f"{view}.html"
 
         return self.templates.TemplateResponse(
-            request=request, name=view, context=context, **kwargs
+            request=self.request,
+            name=view,
+            context=context,
+            status_code=status_code,
+            headers=headers,
+            media_type=media_type,
+            background=background,
         )
 
 
-view = View()
+def view_factory(templates: str | Path | Jinja2Templates):
+    if not isinstance(templates, Jinja2Templates):
+        templates = Jinja2Templates(directory=templates)
+
+    def _dependency(request: Request) -> View:
+        return View(templates=templates, request=request)
+
+    return _dependency

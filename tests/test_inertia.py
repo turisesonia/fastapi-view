@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from pyquery import PyQuery as pq
 
 from fastapi_view import inertia
-from fastapi_view.vite import Vite
+from fastapi_view.inertia.vite import Vite
 
 
 class Item(BaseModel):

@@ -21,6 +21,10 @@ def faker() -> Faker:
 def tests_path() -> Path:
     return Path(os.path.abspath("tests"))
 
+@pytest.fixture
+def templates_path() -> Path:
+    return Path(os.path.abspath("tests/templates"))
+
 
 @pytest.fixture(autouse=True)
 def reset_env():

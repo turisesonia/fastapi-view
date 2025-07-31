@@ -1,7 +1,7 @@
 from enum import StrEnum
 
 
-class Header(StrEnum):
+class InertiaHeader(StrEnum):
     X_INERTIA = "X-Inertia"
     X_INERTIA_VERSION = "X-Inertia-Version"
     X_INERTIA_LOCATION = "X-Inertia-Location"

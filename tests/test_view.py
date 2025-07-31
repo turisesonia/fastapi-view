@@ -1,46 +1,44 @@
+import os
+import typing as t
 from pathlib import Path
 
-import pytest
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.testclient import TestClient
 from jinja2 import Template
 from pyquery import PyQuery as pq
 
-from fastapi_view import view
+from fastapi_view.view import View, view_factory
+
+templates_path = Path(os.path.abspath("tests/templates"))
 
 
-@pytest.fixture()
-def app(tests_path: Path) -> FastAPI:
-    app = FastAPI(title="Test app")
-
-    directory = Path(tests_path, "resources/views")
-
-    view.setup(app, directory=directory)
-
-    @app.get("/")
-    def index(name: str = "World"):
-        return view("index", {"name": name})
-
-    @app.get("/about")
-    def about(message: str = "Hello World"):
-        return view("about", {"message": message})
-
-    return app
-
-
-def test_setup(tests_path: Path):
-    app = FastAPI(title="Test app")
-    directory = Path(tests_path, "resources/views")
-
-    view.setup(app, directory)
+def test_initital_view():
+    view = View(
+        templates=Jinja2Templates(directory=templates_path),
+        request=Request(scope={"type": "http", "path": "/"}),
+    )
 
     assert isinstance(view.templates, Jinja2Templates)
     assert isinstance(view.templates.get_template("index.html"), Template)
-    assert app.user_middleware is not None
 
 
-def test_view_response(app):
+app = FastAPI(title="Test app")
+
+ViewDepends = t.Annotated[View, Depends(view_factory(templates_path))]
+
+
+@app.get("/")
+def index(view: ViewDepends, name: str = "World"):
+    return view.render("index", {"name": name})
+
+
+@app.get("/about")
+def about(view: ViewDepends, message: str = "Hello World"):
+    return view.render("about", {"message": message})
+
+
+def test_view_response():
     with TestClient(app) as client:
         response = client.get("/")
 
@@ -49,7 +47,7 @@ def test_view_response(app):
         assert response.template.name == "index.html"
 
 
-def test_access_about(app):
+def test_access_about():
     with TestClient(app) as client:
         message = "This is about page"
         response = client.get("/about", params={"message": message})
