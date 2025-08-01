@@ -3,14 +3,13 @@ from urllib.parse import urljoin
 
 from fastapi.templating import Jinja2Templates
 
-from .config import ViteConfig
+from ..config import ViteConfig
 
 
 class Vite:
-    _manifest: dict = None
-
     def __init__(self, config: ViteConfig, templates: Jinja2Templates):
         self._config = config
+        self._manifest: dict | None = None
 
         templates.env.globals["vite_hmr_client"] = self.vite_hmr_client
         templates.env.globals["vite_asset"] = self.vite_asset
@@ -25,20 +24,26 @@ class Vite:
             attrs={"type": "module"},
         )
 
-    def vite_asset(self, asset_path: str):
-        while asset_path.startswith("/"):
-            asset_path = asset_path[1:]
+    def vite_asset(self, asset_path: str) -> str:
+        asset_path = asset_path.lstrip("/")
 
         if self._config.dev_mode:
-            return self._script_tag(
-                src=f"{self._config.dev_server_url}/{asset_path}",
-                attrs={"type": "module"},
-            )
+            return self._dev_mode_asset(asset_path)
+        else:
+            return self._prod_mode_asset(asset_path)
 
-        self._load_manifest()
+    def _dev_mode_asset(self, asset_path: str) -> str:
+        return self._script_tag(
+            src=f"{self._config.dev_server_url}/{asset_path}",
+            attrs={"type": "module"},
+        )
+
+    def _prod_mode_asset(self, asset_path: str) -> str:
+        if self._manifest is None:
+            self._load_manifest()
 
         if asset_path not in self._manifest:
-            raise FileNotFoundError(f"Asset not found: {asset_path}")
+            raise FileNotFoundError(f"Asset path {asset_path} not found in manifest")
 
         asset_tags = [tag for tag in self._css_assets_handle(asset_path, [])]
 
@@ -53,9 +58,8 @@ class Vite:
         return "\n".join(asset_tags)
 
     def _load_manifest(self):
-        if self._manifest is None:
-            with open(self._config.manifest_path) as f:
-                self._manifest = json.load(f)
+        with open(self._config.manifest_path) as f:
+            self._manifest = json.load(f)
 
     def _css_assets_handle(self, asset_path: str, processed: list[str]):
         stylesheet_tags = []

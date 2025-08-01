@@ -1,25 +1,22 @@
 {
-  "name": "demo-fastapi-view",
+  "name": "fastapi-view-example-inertia",
   "version": "0.0.1",
   "repository": "",
   "author": "Sam Yao <turisesonia@gmail.com>",
   "license": "MIT",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
-  "devDependencies": {
-    "@vitejs/plugin-vue": "^4.0.0",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.47",
-    "sass": "^1.49.7",
-    "tailwindcss": "^3.4.14",
-    "vite": "^4.0.3"
-  },
   "dependencies": {
-    "@inertiajs/vue3": "^1.2.0",
-    "vue": "^3.2.31"
+    "@inertiajs/vue3": "^2.0.17",
+    "vue": "^3.5.18"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "vite": "^7.0.6"
   }
 }

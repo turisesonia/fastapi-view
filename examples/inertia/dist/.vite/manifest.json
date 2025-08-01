@@ -1,0 +1,53 @@
+{
+  "_AppLayout-BWhhM0nn.js": {
+    "file": "assets/AppLayout-BWhhM0nn.js",
+    "name": "AppLayout",
+    "imports": [
+      "resources/assets/js/app.js"
+    ]
+  },
+  "resources/assets/js/Pages/About.vue": {
+    "file": "assets/About-CXLote_n.js",
+    "name": "About",
+    "src": "resources/assets/js/Pages/About.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_AppLayout-BWhhM0nn.js",
+      "resources/assets/js/app.js"
+    ]
+  },
+  "resources/assets/js/Pages/Index.vue": {
+    "file": "assets/Index-DX04RQTF.js",
+    "name": "Index",
+    "src": "resources/assets/js/Pages/Index.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_AppLayout-BWhhM0nn.js",
+      "resources/assets/js/app.js"
+    ]
+  },
+  "resources/assets/js/Pages/Item.vue": {
+    "file": "assets/Item-CaTT_J5Q.js",
+    "name": "Item",
+    "src": "resources/assets/js/Pages/Item.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_AppLayout-BWhhM0nn.js",
+      "resources/assets/js/app.js"
+    ]
+  },
+  "resources/assets/js/app.js": {
+    "file": "assets/app-sz-20cUM.js",
+    "name": "app",
+    "src": "resources/assets/js/app.js",
+    "isEntry": true,
+    "dynamicImports": [
+      "resources/assets/js/Pages/About.vue",
+      "resources/assets/js/Pages/Index.vue",
+      "resources/assets/js/Pages/Item.vue"
+    ],
+    "css": [
+      "assets/app-DqqLoLEV.css"
+    ]
+  }
+}

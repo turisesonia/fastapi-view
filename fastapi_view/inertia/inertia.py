@@ -3,10 +3,11 @@ import typing as t
 from pathlib import Path
 
 from fastapi import Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from fastapi_view.inertia.config import ViteConfig
+from fastapi_view.config import ViteConfig
 from fastapi_view.inertia.enums import InertiaHeader
 from fastapi_view.inertia.vite import Vite
 from fastapi_view.view import View
@@ -66,12 +67,14 @@ class Inertia:
 
         props = self._resolve_prop_callables(props)
 
-        return {
-            "version": self.assets_version,
-            "component": component,
-            "props": {**self._share, **props},
-            "url": str(request.url),
-        }
+        return jsonable_encoder(
+            {
+                "version": self.assets_version,
+                "component": component,
+                "props": {**self._share, **props},
+                "url": str(request.url),
+            }
+        )
 
     def _resolve_prop_callables(self, props: dict) -> dict:
         for key, value in props.items():
