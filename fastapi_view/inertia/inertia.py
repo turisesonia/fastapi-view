@@ -128,12 +128,12 @@ class Inertia(InertiaBase):
         return self._view.render(self._root_template, {"page": json.dumps(page_data)})
 
 
-def inertia_factory(templates: str | Path | Jinja2Templates, config: InertiaConfig):
+def inertia_dependency(templates: str | Path | Jinja2Templates, config: InertiaConfig):
     if not isinstance(templates, Jinja2Templates):
         templates = Jinja2Templates(directory=templates)
 
     if config.vite_config:
-        Vite(config.vite_config, templates)
+        Vite(templates, config.vite_config)
 
     def _depends(request: Request) -> Inertia:
         return Inertia(request, templates, config)

@@ -1,3 +1,3 @@
-from fastapi_view.view import View, view_factory
+from fastapi_view.view import View, view_dependency
 
-__all__ = ["View", "view_factory"]
+__all__ = ["View", "view_dependency"]

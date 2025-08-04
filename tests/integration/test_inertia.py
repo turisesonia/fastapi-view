@@ -11,7 +11,7 @@ from pyquery import PyQuery as pq
 
 from fastapi_view.inertia import Inertia, InertiaConfig
 from fastapi_view.inertia.enums import InertiaHeader
-from fastapi_view.inertia.inertia import inertia_factory
+from fastapi_view.inertia.inertia import inertia_dependency
 from fastapi_view.inertia.props import OptionalProp
 
 templates_path = Path(os.path.abspath("tests/templates"))
@@ -28,7 +28,7 @@ app = FastAPI(title="Inertia Integration Test App")
 InertiaDepends = t.Annotated[
     Inertia,
     Depends(
-        inertia_factory(
+        inertia_dependency(
             templates_path,
             InertiaConfig(root_template="inertia.html", assets_version="1.0.0"),
         )

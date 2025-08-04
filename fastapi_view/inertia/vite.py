@@ -7,7 +7,7 @@ from .config import ViteConfig
 
 
 class Vite:
-    def __init__(self, config: ViteConfig, templates: Jinja2Templates):
+    def __init__(self, templates: Jinja2Templates, config: ViteConfig):
         self._config = config
         self._manifest: dict | None = None
 
@@ -108,12 +108,3 @@ class Vite:
             prefix += "/"
 
         return urljoin(prefix, file)
-
-
-# def mount(app: FastAPI):
-#     if not self._config.dev_mode and not self._config.static_url:
-#         route = self._config.dist_uri_prefix
-#         if not route.startswith("/"):
-#             route = f"/{route}"
-
-#         app.mount(route, app=StaticFiles(directory=self._config.dist_path))

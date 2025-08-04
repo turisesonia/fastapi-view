@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from jinja2 import Template
 from pyquery import PyQuery as pq
 
-from fastapi_view.view import View, view_factory
+from fastapi_view.view import View, view_dependency
 
 templates_path = Path(os.path.abspath("tests/templates"))
 
@@ -25,7 +25,7 @@ def test_initital_view():
 
 app = FastAPI(title="Test app")
 
-ViewDepends = t.Annotated[View, Depends(view_factory(templates_path))]
+ViewDepends = t.Annotated[View, Depends(view_dependency(templates_path))]
 
 
 @app.get("/")

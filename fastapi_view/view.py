@@ -44,7 +44,7 @@ class View:
         )
 
 
-def view_factory(templates: str | Path | Jinja2Templates):
+def view_dependency(templates: str | Path | Jinja2Templates):
     if not isinstance(templates, Jinja2Templates):
         templates = Jinja2Templates(directory=templates)
 
