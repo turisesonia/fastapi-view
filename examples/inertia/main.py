@@ -3,12 +3,16 @@ import typing as t
 from pathlib import Path
 
 from fastapi import Depends, FastAPI
-from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-from fastapi_view import Inertia, inertia_factory
-from fastapi_view.config import ViteConfig
+from fastapi_view.inertia import (
+    Inertia,
+    InertiaConfig,
+    ViteConfig,
+    inertia_factory,
+)
 
 APP_PATH: Path = Path(os.path.abspath(""))
 DIST_PATH: Path = APP_PATH / "dist"
@@ -16,13 +20,15 @@ RESOURCES_PATH: Path = APP_PATH / "resources"
 VIEWS_PATH: Path = RESOURCES_PATH / "views"
 
 
-templates = Jinja2Templates(directory=VIEWS_PATH)
-
-vite_config = ViteConfig(
-    # dev_mode=True, # Uncomment this line to enable development mode
-    manifest_path=Path(APP_PATH, "dist", ".vite", "manifest.json"),
-    dist_path=Path(APP_PATH, "dist"),
-    dist_uri_prefix="public",
+inertia_config = InertiaConfig(
+    root_template="app.html",
+    assets_version="1.0.0",
+    vite_config=ViteConfig(
+        # dev_mode=True, # Uncomment this line to enable development mode
+        manifest_path=Path(APP_PATH, "dist", ".vite", "manifest.json"),
+        dist_path=Path(APP_PATH, "dist"),
+        dist_uri_prefix="public",
+    ),
 )
 
 
@@ -30,9 +36,8 @@ InertiaDepend = t.Annotated[
     Inertia,
     Depends(
         inertia_factory(
-            templates=templates,
-            root_template="app.html",
-            vite_config=vite_config,
+            templates=Jinja2Templates(directory=VIEWS_PATH),
+            config=inertia_config,
         )
     ),
 ]
@@ -51,19 +56,16 @@ class Item(BaseModel):
 
 @app.get("/")
 def index(inertia: InertiaDepend):
-    print(id(inertia))
     return inertia.render("Index")
 
 
 @app.get("/about")
 def about(inertia: InertiaDepend):
-    print(id(inertia))
     return inertia.render("About")
 
 
 @app.get("/items")
 def items(inertia: InertiaDepend):
-    print(id(inertia))
     items = (
         Item(
             id=n,

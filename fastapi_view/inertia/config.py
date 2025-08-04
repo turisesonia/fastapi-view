@@ -1,11 +1,13 @@
+import typing as t
 from dataclasses import dataclass
 from pathlib import Path
 
 
 @dataclass
 class InertiaConfig:
-    assets_version: str = ""
-    vite_config: "ViteConfig" | None = None
+    root_template: str = "index.html"
+    assets_version: str | None = None
+    vite_config: t.Optional["ViteConfig"] = None
 
 
 @dataclass

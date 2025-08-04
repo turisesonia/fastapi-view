@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from fastapi.templating import Jinja2Templates
 
-from fastapi_view.config import ViteConfig
+from fastapi_view.inertia.config import ViteConfig
 from fastapi_view.inertia.vite import Vite
 
 
@@ -202,7 +202,7 @@ def test_vite_asset_not_found_in_manifest(templates: Jinja2Templates, manifest: 
     vite = Vite(config=config, templates=templates)
     vite._manifest = manifest
 
-    with pytest.raises(FileNotFoundError, match="Asset path nonexistent.js not found in manifest"):
+    with pytest.raises(
+        FileNotFoundError, match="Asset path nonexistent.js not found in manifest"
+    ):
         vite.vite_asset("nonexistent.js")
-
-

@@ -8,15 +8,18 @@ from starlette.background import BackgroundTask
 
 
 class View:
-    def __init__(self, templates: Jinja2Templates, request: Request):
-        if not isinstance(templates, Jinja2Templates):
-            raise TypeError("templates must be an instance of Jinja2Templates")
+    _request: Request
+    _templates: Jinja2Templates
 
+    def __init__(self, request: Request, templates: Jinja2Templates):
         if not isinstance(request, Request):
             raise ValueError("request instance type must be fastapi.Request")
 
-        self.templates = templates
-        self.request = request
+        if not isinstance(templates, Jinja2Templates):
+            raise TypeError("templates must be an instance of Jinja2Templates")
+
+        self._request = request
+        self._templates = templates
 
     def render(
         self,
@@ -30,8 +33,8 @@ class View:
         if not view.endswith(".html"):
             view = f"{view}.html"
 
-        return self.templates.TemplateResponse(
-            request=self.request,
+        return self._templates.TemplateResponse(
+            request=self._request,
             name=view,
             context=context,
             status_code=status_code,
@@ -45,7 +48,7 @@ def view_factory(templates: str | Path | Jinja2Templates):
     if not isinstance(templates, Jinja2Templates):
         templates = Jinja2Templates(directory=templates)
 
-    def _dependency(request: Request) -> View:
-        return View(templates=templates, request=request)
+    def _depends(request: Request) -> View:
+        return View(request, templates)
 
-    return _dependency
+    return _depends

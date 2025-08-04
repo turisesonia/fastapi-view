@@ -19,8 +19,8 @@ def test_initital_view():
         request=Request(scope={"type": "http", "path": "/"}),
     )
 
-    assert isinstance(view.templates, Jinja2Templates)
-    assert isinstance(view.templates.get_template("index.html"), Template)
+    assert isinstance(view._templates, Jinja2Templates)
+    assert isinstance(view._templates.get_template("index.html"), Template)
 
 
 app = FastAPI(title="Test app")

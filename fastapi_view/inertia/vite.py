@@ -3,7 +3,7 @@ from urllib.parse import urljoin
 
 from fastapi.templating import Jinja2Templates
 
-from ..config import ViteConfig
+from .config import ViteConfig
 
 
 class Vite:

@@ -1,86 +1,217 @@
-from datetime import datetime
 from unittest.mock import Mock
 
 import pytest
 from fastapi import Request
-from pydantic import BaseModel
+from fastapi.templating import Jinja2Templates
 
+from fastapi_view.inertia import Inertia, InertiaConfig
 from fastapi_view.inertia.enums import InertiaHeader
-from fastapi_view.inertia.inertia import Inertia
+from fastapi_view.inertia.props import IgnoreFirstLoad, OptionalProp
 from fastapi_view.view import View
 
 
 @pytest.fixture
-def mock_view():
-    """建立 mock View 物件"""
-    view = Mock(spec=View)
-    view.request = Mock(spec=Request)
-    view.request.headers = {}
-    view.request.url = "http://test.com/"
-    view.render = Mock(return_value="mocked_response")
-    return view
+def mock_request():
+    """建立 mock Request 物件"""
+    request = Mock(spec=Request)
+    request.headers = {}
+    request.url = "http://test.com/"
+    return request
 
 
-def test_inertia_init(mock_view):
-    """測試 Inertia 初始化"""
-    inertia = Inertia(view=mock_view, root_template="test.html")
-    assert inertia.view == mock_view
-    assert inertia.root_template == "test.html"
+@pytest.fixture
+def inertia_config() -> InertiaConfig:
+    return InertiaConfig(
+        root_template="app.html",
+        assets_version="1.0.0",
+    )
 
 
-def test_inertia_header():
-    assert {InertiaHeader.X_INERTIA: "XX"} == {"X-Inertia": "XX"}
+@pytest.fixture
+def inertia(mock_request, inertia_config) -> Inertia:
+    return Inertia(
+        request=mock_request,
+        templates=Jinja2Templates(directory="templates"),
+        config=inertia_config,
+    )
 
 
-def test_resolve_prop_callables_flat_structure(mock_view):
-    inertia = Inertia(view=mock_view, root_template="test.html")
+def test_inertia_init(mock_request, inertia_config: InertiaConfig):
+    inertia = Inertia(
+        request=mock_request,
+        templates=Jinja2Templates(directory="templates"),
+        config=inertia_config,
+    )
+    assert isinstance(inertia._view, View)
+    assert inertia._root_template == "app.html"
 
-    def simple_callable():
-        return "called_value"
 
-    def get_user_count():
-        return 42
+def test_is_partial_request(mock_request, inertia: Inertia):
+    """測試 _is_partial_request 屬性的各種情況"""
+
+    # 沒有 partial headers 時為 False
+    assert inertia._is_partial_request is False
+
+    # 有 headers 但 component 未設置時為 False
+    mock_request.headers[InertiaHeader.PARTIAL_ONLY] = "name,age"
+    mock_request.headers[InertiaHeader.PARTIAL_COMPONENT] = "TestComponent"
+    assert inertia._is_partial_request is False
+
+    # component 不匹配時為 False
+    inertia._component = "DifferentComponent"
+    assert inertia._is_partial_request is False
+
+    # headers 和 component 匹配時為 True
+    inertia._component = "TestComponent"
+    assert inertia._is_partial_request is True
+
+
+def test_partial_only_keys(mock_request, inertia: Inertia):
+    """測試 _partial_only_keys 屬性的各種情況"""
+
+    # 沒有 header 時返回空字串列表
+    assert inertia._partial_only_keys == [""]
+
+    # 單一 key
+    mock_request.headers[InertiaHeader.PARTIAL_ONLY] = "name"
+    assert inertia._partial_only_keys == ["name"]
+
+    # 多個 keys 且包含空格
+    mock_request.headers[InertiaHeader.PARTIAL_ONLY] = "name, age , email"
+    assert inertia._partial_only_keys == ["name", "age", "email"]
+
+
+def test_partial_except_keys(mock_request, inertia: Inertia):
+    """測試 _partial_except_keys 屬性的各種情況"""
+
+    # 沒有 header 時返回空字串列表
+    assert inertia._partial_except_keys == [""]
+
+    # 單一 key
+    mock_request.headers[InertiaHeader.PARTIAL_EXCEPT] = "password"
+    assert inertia._partial_except_keys == ["password"]
+
+    # 多個 keys 且包含空格
+    mock_request.headers[InertiaHeader.PARTIAL_EXCEPT] = "password, secret , token"
+    assert inertia._partial_except_keys == ["password", "secret", "token"]
+
+
+def test_resolve_partial_props_non_partial_request(inertia: Inertia):
+    """測試 _resolve_partial_props 非 partial request 的情況"""
+    # 普通 props，無 IgnoreFirstLoad
+    props_normal = {"name": "John", "age": 30, "email": "john@example.com"}
+    result = inertia._resolve_partial_props(props_normal)
+    assert result == {"name": "John", "age": 30, "email": "john@example.com"}
+
+    # 包含 IgnoreFirstLoad props
+    props_with_ignore = {
+        "name": "John",
+        "age": 30,
+        "lazy_data": IgnoreFirstLoad(),
+        "optional_data": OptionalProp("optional_value"),
+    }
+    result = inertia._resolve_partial_props(props_with_ignore)
+    assert result == {"name": "John", "age": 30}
+
+    # 全部都是 IgnoreFirstLoad
+    props_all_ignore = {"lazy1": IgnoreFirstLoad(), "lazy2": OptionalProp("value")}
+    result = inertia._resolve_partial_props(props_all_ignore)
+    assert result == {}
+
+
+def test_resolve_partial_props_basic_partial_request(mock_request, inertia: Inertia):
+    """測試 _resolve_partial_props 基本 partial request"""
+    # 設置 partial request
+    mock_request.headers[InertiaHeader.PARTIAL_ONLY] = "name,age"
+    mock_request.headers[InertiaHeader.PARTIAL_COMPONENT] = "TestComponent"
+    inertia._component = "TestComponent"
 
     props = {
         "name": "John",
         "age": 30,
-        "get_message": lambda: "Hello World",
-        "user_count": get_user_count,
-        "static_value": "unchanged",
-        "number": 123,
-        "boolean": True,
-        "none_value": None,
-        "list_value": [1, 2, 3],
-        "callback": simple_callable,
+        "email": "john@example.com",
+        "password": "secret",
+    }
+    result = inertia._resolve_partial_props(props)
+    assert result == {"name": "John", "age": 30}
+
+
+def test_resolve_partial_props_with_except_keys(mock_request, inertia: Inertia):
+    """測試 _resolve_partial_props 有 except keys 的 partial request"""
+    mock_request.headers[InertiaHeader.PARTIAL_ONLY] = "name,age,password"
+    mock_request.headers[InertiaHeader.PARTIAL_EXCEPT] = "password"
+    mock_request.headers[InertiaHeader.PARTIAL_COMPONENT] = "TestComponent"
+    inertia._component = "TestComponent"
+
+    props = {
+        "name": "John",
+        "age": 30,
+        "email": "john@example.com",
+        "password": "secret",
+    }
+    result = inertia._resolve_partial_props(props)
+    assert result == {"name": "John", "age": 30}
+
+
+def test_resolve_partial_props_no_matching_keys(mock_request, inertia: Inertia):
+    """測試 _resolve_partial_props partial_only_keys 無匹配的情況"""
+    mock_request.headers[InertiaHeader.PARTIAL_ONLY] = "nonexistent"
+    mock_request.headers[InertiaHeader.PARTIAL_EXCEPT] = ""
+    mock_request.headers[InertiaHeader.PARTIAL_COMPONENT] = "TestComponent"
+    inertia._component = "TestComponent"
+
+    props = {"name": "John", "age": 30}
+    result = inertia._resolve_partial_props(props)
+    assert result == {}
+
+
+def test_resolve_partial_props_ignore_first_load_in_partial(
+    mock_request, inertia: Inertia
+):
+    """測試 _resolve_partial_props 在 partial request 中 IgnoreFirstLoad 不會被過濾"""
+    mock_request.headers[InertiaHeader.PARTIAL_ONLY] = "name,lazy_data"
+    mock_request.headers[InertiaHeader.PARTIAL_EXCEPT] = ""
+    mock_request.headers[InertiaHeader.PARTIAL_COMPONENT] = "TestComponent"
+    inertia._component = "TestComponent"
+
+    props = {
+        "name": "John",
+        "age": 30,
+        "lazy_data": IgnoreFirstLoad(),
+        "email": "john@example.com",
+    }
+    result = inertia._resolve_partial_props(props)
+    assert result == {
+        "name": "John",
+        "lazy_data": props["lazy_data"],  # 保持原物件引用
     }
 
-    result = inertia._resolve_prop_callables(props)
 
+def test_resolve_callable_props_basic_functions(inertia: Inertia):
+    """測試 _resolve_callable_props 處理基本函數"""
+
+    def simple_function():
+        return "function_result"
+
+    props = {
+        "name": "John",
+        "age": 30,
+        "message": lambda: "Hello World",
+        "count": simple_function,
+        "static": "unchanged",
+    }
+    result = inertia._resolve_callable_props(props)
     assert result == {
         "name": "John",
         "age": 30,
-        "get_message": "Hello World",
-        "user_count": 42,
-        "static_value": "unchanged",
-        "number": 123,
-        "boolean": True,
-        "none_value": None,
-        "list_value": [1, 2, 3],
-        "callback": "called_value",
+        "message": "Hello World",
+        "count": "function_result",
+        "static": "unchanged",
     }
 
 
-def test_resolve_prop_callables_nested_structure(mock_view):
-    inertia = Inertia(view=mock_view, root_template="test.html")
-
-    def get_user_permissions():
-        return ["read", "write", "admin"]
-
-    def calculate_score():
-        return 95.5
-
-    def get_current_time():
-        return "2024-07-31T10:30:00"
+def test_resolve_callable_props_callable_objects(inertia: Inertia):
+    """測試 _resolve_callable_props 處理可呼叫物件"""
 
     class Counter:
         def __init__(self):
@@ -91,315 +222,105 @@ def test_resolve_prop_callables_nested_structure(mock_view):
             return self.count
 
     counter = Counter()
+    props = {"counter": counter, "name": "test"}
+    result = inertia._resolve_callable_props(props)
+    assert result == {"counter": 1, "name": "test"}
 
-    props_nested = {
+    # 驗證方法會修改原始字典（callable 被結果替換）
+    assert props["counter"] == 1  # 原字典已被修改
+    assert props["name"] == "test"  # 非 callable 值保持不變
+
+
+def test_resolve_callable_props_nested_dicts(inertia: Inertia):
+    """測試 _resolve_callable_props 處理巢狀字典"""
+    props = {
         "user": {
-            "id": 1,
             "name": "Alice",
-            "permissions": get_user_permissions,
-            "profile": {
-                "score": calculate_score,
-                "last_login": get_current_time,
-                "settings": {
-                    "theme": "dark",
-                    "notifications": lambda: True,
-                    "counter": counter,
-                },
-            },
+            "get_permissions": lambda: ["read", "write"],
+            "age": 25,
         },
-        "metadata": {
-            "version": "1.0",
-            "timestamp": lambda: "2024-07-31",
-            "config": {"debug": False, "log_level": lambda: "INFO"},
-        },
-        "static_data": "unchanged",
-        "dynamic_value": lambda: "generated",
+        "callback": lambda: "top_level",
     }
-
-    result = inertia._resolve_prop_callables(props_nested)
-
+    result = inertia._resolve_callable_props(props)
     assert result == {
-        "user": {
-            "id": 1,
-            "name": "Alice",
-            "permissions": ["read", "write", "admin"],
-            "profile": {
-                "score": 95.5,
-                "last_login": "2024-07-31T10:30:00",
-                "settings": {"theme": "dark", "notifications": True, "counter": 1},
+        "user": {"name": "Alice", "get_permissions": ["read", "write"], "age": 25},
+        "callback": "top_level",
+    }
+
+
+def test_resolve_callable_props_deep_nested_dicts(inertia: Inertia):
+    """測試 _resolve_callable_props 處理深層巢狀字典"""
+    props = {
+        "level1": {
+            "level2": {
+                "level3": {"deep_func": lambda: "deep_result", "value": "static"},
+                "mid_func": lambda: "mid_result",
             },
-        },
-        "metadata": {
-            "version": "1.0",
-            "timestamp": "2024-07-31",
-            "config": {"debug": False, "log_level": "INFO"},
-        },
-        "static_data": "unchanged",
-        "dynamic_value": "generated",
+            "top_func": lambda: "top_result",
+        }
     }
-
-
-def test_resolve_prop_callables_no_callables(mock_view):
-    inertia = Inertia(view=mock_view, root_template="test.html")
-
-    props = {
-        "name": "John",
-        "age": 30,
-        "nested": {
-            "value": "test",
-            "number": 42,
-        },
-    }
-
-    result = inertia._resolve_prop_callables(props)
-
-    assert result == props
-
-
-def test_resolve_prop_callables_empty_dict(mock_view):
-    inertia = Inertia(view=mock_view, root_template="test.html")
-
-    assert inertia._resolve_prop_callables({}) == {}
-
-
-def test_build_page_props_basic(mock_view):
-    """測試 _build_page_props 基本功能"""
-    inertia = Inertia(view=mock_view, root_template="test.html", assets_version="v1.0")
-
-    props = {
-        "name": "John",
-        "age": 30,
-        "callback": lambda: "called_value",
-    }
-
-    result = inertia._build_page_props("TestComponent", mock_view.request, props)
-
-    assert result["version"] == "v1.0"
-    assert result["component"] == "TestComponent"
-    assert result["url"] == "http://test.com/"
-    assert result["props"] == {
-        "name": "John",
-        "age": 30,
-        "callback": "called_value",
-    }
-
-
-def test_build_page_props_with_shared_props(mock_view):
-    """測試 _build_page_props 包含共享屬性"""
-    inertia = Inertia(view=mock_view, root_template="test.html", assets_version="v1.0")
-    inertia._share = {"global_data": "shared_value", "app_name": "TestApp"}
-
-    props = {
-        "name": "John",
-        "age": 30,
-        "callback": lambda: "called_value",
-    }
-
-    result = inertia._build_page_props("TestComponent", mock_view.request, props)
-
-    assert result["props"] == {
-        "global_data": "shared_value",
-        "app_name": "TestApp",
-        "name": "John",
-        "age": 30,
-        "callback": "called_value",
-    }
-
-    inertia._share.clear()
-
-
-def test_build_page_props_partial_request(mock_view):
-    """測試 _build_page_props 部分請求"""
-    mock_view.request.headers = {
-        InertiaHeader.X_INERTIA_PARTIAL_DATA: "user, metadata",
-        InertiaHeader.X_INERTIA_PARTIAL_COMPONENT: "TestComponent",
-    }
-
-    inertia = Inertia(view=mock_view, root_template="test.html")
-
-    props = {
-        "user": "Alice",
-        "metadata": "v1.0",
-        "static_data": "unchanged",
-        "dynamic_value": "generated",
-    }
-
-    result = inertia._build_page_props("TestComponent", mock_view.request, props)
-
-    assert result["props"] == {
-        "user": "Alice",
-        "metadata": "v1.0",
-    }
-
-
-def test_build_page_props_lazy_props_excluded(mock_view):
-    """測試 _build_page_props 非部分請求時排除 LazyProp"""
-    from fastapi_view.inertia.inertia import LazyProp
-
-    inertia = Inertia(view=mock_view, root_template="test.html")
-
-    props = {
-        "name": "John",
-        "age": 30,
-        "callback": lambda: "called_value",
-        "lazy_prop": LazyProp(lambda: "lazy_value"),
-    }
-
-    result = inertia._build_page_props("TestComponent", mock_view.request, props)
-
-    assert "lazy_prop" not in result["props"]
-    assert result["props"] == {
-        "name": "John",
-        "age": 30,
-        "callback": "called_value",
-    }
-
-
-def test_build_page_props_with_pydantic_model(mock_view):
-    """測試 _build_page_props 處理 Pydantic 模型"""
-    class UserModel(BaseModel):
-        id: int
-        name: str
-        email: str | None = None
-        is_active: bool = True
-
-    class ProfileModel(BaseModel):
-        bio: str
-        age: int
-        tags: list[str]
-
-    inertia = Inertia(view=mock_view, root_template="test.html")
-
-    user = UserModel(id=1, name="Alice", email="alice@example.com")
-    profile = ProfileModel(bio="Software Engineer", age=30, tags=["python", "fastapi"])
-
-    props = {
-        "user": user,
-        "profile": profile,
-        "metadata": {"version": "1.0"},
-    }
-
-    result = inertia._build_page_props("TestComponent", mock_view.request, props)
-
-    assert result["props"] == {
-        "user": {
-            "id": 1,
-            "name": "Alice",
-            "email": "alice@example.com",
-            "is_active": True,
-        },
-        "profile": {
-            "bio": "Software Engineer",
-            "age": 30,
-            "tags": ["python", "fastapi"],
-        },
-        "metadata": {"version": "1.0"},
-    }
-
-
-def test_build_page_props_with_datetime_objects(mock_view):
-    """測試 _build_page_props 處理 datetime 物件"""
-    inertia = Inertia(view=mock_view, root_template="test.html")
-
-    created_at = datetime(2024, 8, 1, 10, 30, 45)
-    updated_at = datetime(2024, 8, 1, 15, 20, 30)
-
-    props = {
-        "created_at": created_at,
-        "updated_at": updated_at,
-        "user": {
-            "name": "John",
-            "last_login": datetime(2024, 7, 31, 9, 15, 0),
-        },
-        "events": [
-            {
-                "name": "Login",
-                "timestamp": datetime(2024, 8, 1, 8, 0, 0),
+    result = inertia._resolve_callable_props(props)
+    assert result == {
+        "level1": {
+            "level2": {
+                "level3": {"deep_func": "deep_result", "value": "static"},
+                "mid_func": "mid_result",
             },
-            {
-                "name": "Update Profile",
-                "timestamp": datetime(2024, 8, 1, 12, 30, 0),
-            },
-        ],
-    }
-
-    result = inertia._build_page_props("TestComponent", mock_view.request, props)
-
-    assert result["props"] == {
-        "created_at": "2024-08-01T10:30:45",
-        "updated_at": "2024-08-01T15:20:30",
-        "user": {
-            "name": "John",
-            "last_login": "2024-07-31T09:15:00",
-        },
-        "events": [
-            {
-                "name": "Login",
-                "timestamp": "2024-08-01T08:00:00",
-            },
-            {
-                "name": "Update Profile",
-                "timestamp": "2024-08-01T12:30:00",
-            },
-        ],
+            "top_func": "top_result",
+        }
     }
 
 
-def test_build_page_props_with_complex_nested_data(mock_view):
-    """測試 _build_page_props 處理包含 Pydantic 和 datetime 的複雜巢狀資料"""
-    class AddressModel(BaseModel):
-        street: str
-        city: str
-        country: str
+def test_resolve_callable_props_edge_cases(inertia: Inertia):
+    """測試 _resolve_callable_props 邊界情況"""
+    # 空字典
+    props_empty = {}
+    result = inertia._resolve_callable_props(props_empty)
+    assert result == {}
 
-    class UserModel(BaseModel):
-        id: int
-        name: str
-        address: AddressModel
-        created_at: datetime
+    # 非字典類型不應被遞歸處理
+    props_non_dict = {
+        "list_data": [lambda: "should_not_call", "static"],
+        "tuple_data": (lambda: "should_not_call", "static"),
+        "string_data": "normal_string",
+        "none_data": None,
+    }
+    original_list = props_non_dict["list_data"][:]
+    original_tuple = props_non_dict["tuple_data"]
 
-    inertia = Inertia(view=mock_view, root_template="test.html")
-
-    address = AddressModel(
-        street="123 Main St",
-        city="Taipei",
-        country="Taiwan"
-    )
-
-    user = UserModel(
-        id=1,
-        name="Alice",
-        address=address,
-        created_at=datetime(2024, 1, 15, 14, 30, 0)
-    )
-
-    props = {
-        "user": user,
-        "current_time": datetime(2024, 8, 1, 16, 45, 30),
-        "callback": lambda: datetime(2024, 8, 1, 17, 0, 0),
-        "metadata": {
-            "version": "2.0",
-            "last_updated": datetime(2024, 7, 30, 12, 0, 0),
-        },
+    result = inertia._resolve_callable_props(props_non_dict)
+    assert result == {
+        "list_data": original_list,  # 列表內的 lambda 不應被呼叫
+        "tuple_data": original_tuple,  # 元組內的 lambda 不應被呼叫
+        "string_data": "normal_string",
+        "none_data": None,
     }
 
-    result = inertia._build_page_props("TestComponent", mock_view.request, props)
 
-    assert result["props"] == {
-        "user": {
-            "id": 1,
-            "name": "Alice",
-            "address": {
-                "street": "123 Main St",
-                "city": "Taipei",
-                "country": "Taiwan",
-            },
-            "created_at": "2024-01-15T14:30:00",
-        },
-        "current_time": "2024-08-01T16:45:30",
-        "callback": "2024-08-01T17:00:00",
-        "metadata": {
-            "version": "2.0",
-            "last_updated": "2024-07-30T12:00:00",
-        },
+def test_resolve_callable_props_complex_returns(inertia: Inertia):
+    """測試 _resolve_callable_props 處理返回複雜物件的函數"""
+
+    def get_user_data():
+        return {"id": 1, "name": "Bob", "permissions": ["admin"]}
+
+    props = {"user_data": get_user_data, "timestamp": lambda: "2024-08-04"}
+    result = inertia._resolve_callable_props(props)
+    assert result == {
+        "user_data": {"id": 1, "name": "Bob", "permissions": ["admin"]},
+        "timestamp": "2024-08-04",
     }
+
+
+def test_resolve_callable_props_no_recursive_on_returned_dicts(inertia: Inertia):
+    """測試 _resolve_callable_props 不會對返回的字典進行遞歸處理"""
+
+    def get_dict_with_callable():
+        return {"nested_func": lambda: "this_should_not_be_called", "value": "static"}
+
+    props = {"data": get_dict_with_callable}
+    result = inertia._resolve_callable_props(props)
+    returned_dict = result["data"]
+
+    # 確認返回的字典內的 lambda 沒有被呼叫
+    assert callable(returned_dict["nested_func"])
+    assert returned_dict["value"] == "static"
