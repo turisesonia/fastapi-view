@@ -1,40 +1,61 @@
-[tool.poetry]
+[project]
 name = "fastapi-view"
 version = "0.4.0"
 description = "A jinja2 view template helping function for FastAPI."
-authors = ["Sam Yao <turisesonia@gmail.com>"]
-license = "MIT"
+authors = [{ name = "Sam Yao", email = "turisesonia@gmail.com" }]
+license = { text = "MIT" }
 readme = "README.md"
-homepage = "https://github.com/turisesonia/fastapi-view.git"
-repository = "https://github.com/turisesonia/fastapi-view.git"
+requires-python = ">=3.10"
 keywords = ["Fastapi", "template", "view", "jinja2"]
-classifiers = []
-# include = ["LICENSE"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: FastAPI",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = ["fastapi>=0.70.0", "Jinja2>=3.0.0"]
 
-[tool.poetry.dependencies]
-python = "^3.10"
-fastapi = ">=0.70.0"
-Jinja2 = "^3.0.0"
-pydantic-settings = "^2.5.2"
-pydantic = ">=2.0.0"
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.3",
+    "fastapi[standard]>=0.115.0",
+    "requests>=2.27.1",
+    "httpx>=0.25.1",
+    "pyquery>=2.0.0",
+    "faker>=28.0.0",
+    "pytest-mock>=3.14.0",
+    "uvicorn>=0.30.6",
+]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.4.3"
-fastapi = {extras = ["standard"], version = "^0.115.0"}
-requests = "^2.27.1"
-httpx = "^0.25.1"
-pyquery = "^2.0.0"
-faker = "^28.0.0"
-pytest-mock = "^3.14.0"
-uvicorn = "^0.30.6"
-poethepoet = "^0.29.0"
+[project.urls]
+Homepage = "https://github.com/turisesonia/fastapi-view.git"
+Repository = "https://github.com/turisesonia/fastapi-view.git"
+Issues = "https://github.com/turisesonia/fastapi-view/issues"
 
-[tool.poe.tasks]
-dev = "uvicorn example.main:app --reload"
+[project.scripts]
+fastapi-view-inertia = "examples.inertia.src.main:app"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.4.3",
+    "fastapi[standard]>=0.115.0",
+    "requests>=2.27.1",
+    "httpx>=0.25.1",
+    "pyquery>=2.0.0",
+    "faker>=28.0.0",
+    "pytest-mock>=3.14.0",
+    "uvicorn>=0.30.6",
+]
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 
 [tool.pytest.ini_options]
@@ -46,7 +67,7 @@ filterwarnings = ["ignore::DeprecationWarning"]
 [tool.ruff]
 select = ["E", "F", "I", "UP"]
 target-version = "py310"
-ignore = ["UP032"]
+ignore = ["UP032", "UP007", "I001"]
 
 [tool.ruff.lint.pycodestyle]
 ignore-overlong-task-comments = true

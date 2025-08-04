@@ -1,6 +1,3 @@
-from contextvars import ContextVar
+from fastapi_view.view import View, view_dependency
 
-view_request: ContextVar = ContextVar("view_request", default=None)
-
-from .view import view
-from .inertia import inertia
+__all__ = ["View", "view_dependency"]
