@@ -7,12 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-from fastapi_view.inertia import (
-    Inertia,
-    InertiaConfig,
-    ViteConfig,
-    inertia_factory,
-)
+from fastapi_view.inertia import Inertia, InertiaConfig, ViteConfig, inertia_dependency
 
 APP_PATH: Path = Path(os.path.abspath(""))
 DIST_PATH: Path = APP_PATH / "dist"
@@ -27,7 +22,7 @@ inertia_config = InertiaConfig(
         # dev_mode=True, # Uncomment this line to enable development mode
         manifest_path=Path(APP_PATH, "dist", ".vite", "manifest.json"),
         dist_path=Path(APP_PATH, "dist"),
-        dist_uri_prefix="public",
+        dist_uri_prefix="/public",
     ),
 )
 
@@ -35,7 +30,7 @@ inertia_config = InertiaConfig(
 InertiaDepend = t.Annotated[
     Inertia,
     Depends(
-        inertia_factory(
+        inertia_dependency(
             templates=Jinja2Templates(directory=VIEWS_PATH),
             config=inertia_config,
         )

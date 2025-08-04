@@ -1,4 +1,4 @@
-import{_ as l}from"./AppLayout-BWhhM0nn.js";import{c as d,o,w as n,a as t,b as p,F as m,r as c,t as a,d as r}from"./app-sz-20cUM.js";const g={class:"max-w-5xl mx-auto my-12"},x={class:"grid grid-cols-1 md:grid-cols-2 gap-6 mb-16"},b={class:"text-xl font-semibold text-gray-800 mb-2"},u={class:"text-gray-600"},y=`
+import{_ as l}from"./AppLayout-BZnnFZk-.js";import{c as d,o,w as n,a as t,b as p,F as m,r as c,t as a,d as r}from"./app-DEqib_Tg.js";const g={class:"max-w-5xl mx-auto my-12"},x={class:"grid grid-cols-1 md:grid-cols-2 gap-6 mb-16"},b={class:"text-xl font-semibold text-gray-800 mb-2"},u={class:"text-gray-600"},y=`
 import os
 
 from fastapi import FastAPI

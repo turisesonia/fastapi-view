@@ -4,6 +4,7 @@ import { resolve } from 'path'
 
 
 export default defineConfig({
+    base: '/public/',
     resolve: {
         alias: {
             '@': resolve('/resources/assets'),

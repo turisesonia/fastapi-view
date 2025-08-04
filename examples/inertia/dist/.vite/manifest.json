@@ -1,43 +1,43 @@
 {
-  "_AppLayout-BWhhM0nn.js": {
-    "file": "assets/AppLayout-BWhhM0nn.js",
+  "_AppLayout-BZnnFZk-.js": {
+    "file": "assets/AppLayout-BZnnFZk-.js",
     "name": "AppLayout",
     "imports": [
       "resources/assets/js/app.js"
     ]
   },
   "resources/assets/js/Pages/About.vue": {
-    "file": "assets/About-CXLote_n.js",
+    "file": "assets/About-_a5FfqzW.js",
     "name": "About",
     "src": "resources/assets/js/Pages/About.vue",
     "isDynamicEntry": true,
     "imports": [
-      "_AppLayout-BWhhM0nn.js",
+      "_AppLayout-BZnnFZk-.js",
       "resources/assets/js/app.js"
     ]
   },
   "resources/assets/js/Pages/Index.vue": {
-    "file": "assets/Index-DX04RQTF.js",
+    "file": "assets/Index-BPf0YHJI.js",
     "name": "Index",
     "src": "resources/assets/js/Pages/Index.vue",
     "isDynamicEntry": true,
     "imports": [
-      "_AppLayout-BWhhM0nn.js",
+      "_AppLayout-BZnnFZk-.js",
       "resources/assets/js/app.js"
     ]
   },
   "resources/assets/js/Pages/Item.vue": {
-    "file": "assets/Item-CaTT_J5Q.js",
+    "file": "assets/Item-B2RbPA4q.js",
     "name": "Item",
     "src": "resources/assets/js/Pages/Item.vue",
     "isDynamicEntry": true,
     "imports": [
-      "_AppLayout-BWhhM0nn.js",
+      "_AppLayout-BZnnFZk-.js",
       "resources/assets/js/app.js"
     ]
   },
   "resources/assets/js/app.js": {
-    "file": "assets/app-sz-20cUM.js",
+    "file": "assets/app-DEqib_Tg.js",
     "name": "app",
     "src": "resources/assets/js/app.js",
     "isEntry": true,
