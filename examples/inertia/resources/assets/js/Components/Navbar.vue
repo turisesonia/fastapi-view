@@ -1,9 +1,21 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
+import { usePage } from '@inertiajs/vue3'
+import { computed } from 'vue'
 
-const props = defineProps({
+const page = usePage()
+const user = computed(() => page.props.auth?.user)
 
-})
+function logout() {
+  if (confirm('確定要登出嗎？')) {
+    // 使用表單提交來觸發 POST 請求
+    const form = document.createElement('form')
+    form.method = 'POST'
+    form.action = '/auth/logout'
+    document.body.appendChild(form)
+    form.submit()
+  }
+}
 </script>
 
 <template>
@@ -17,9 +29,8 @@ const props = defineProps({
             <Link href="/" class="text-xl font-bold text-gray-800">FastAPI Demo</Link>
           </div>
 
-          <!-- 導航連結 -->
-          <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-
+          <!-- 導航連結 (只有登入時顯示) -->
+          <div v-if="user" class="hidden sm:ml-6 sm:flex sm:space-x-8">
             <Link href="/about" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium" :class="[
               $page.component === 'About'
                 ? 'border-blue-500 text-gray-900'
@@ -27,14 +38,26 @@ const props = defineProps({
             ]">
             關於
             </Link>
-            <Link href="/items" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium" :class="[
-              $page.component === 'Item'
+            <Link href="/products" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium" :class="[
+              $page.component === 'Products/Index'
                 ? 'border-blue-500 text-gray-900'
                 : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
             ]">
             產品
             </Link>
           </div>
+        </div>
+
+        <!-- 用戶資訊和登出 -->
+        <div v-if="user" class="flex items-center space-x-4">
+          <span class="text-sm text-gray-700">
+            歡迎，{{ user.display_name }}
+          </span>
+          <button
+            @click="logout"
+            class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-sm transition-colors">
+            登出
+          </button>
         </div>
 
         <!-- 手機版選單按鈕 -->

@@ -1,31 +1,12 @@
 <script setup>
 import AppLayout from '@/js/Layouts/AppLayout.vue'
 
-const features = [
-  { title: '快速整合', desc: '輕鬆整合 FastAPI 後端服務' },
-  { title: 'Inertia.js & Vite', desc: '支援 Inertia.js 以及 Vite' },
-]
-
-const codeExample = `
-import os
-
-from fastapi import FastAPI
-
-from fastapi_view import inertia
-
-app = FastAPI(title="api")
-inertia.setup(app, directory="resources/views")
-
-@app.get("/")
-
-@app.get("/")
-def index():
-    return inertia("Index")
-
-@app.get("/about")
-def about():
-    return inertia("About")
-`
+const props = defineProps({
+  title: String,
+  subtitle: String,
+  features: Array,
+  code_example: String
+})
 </script>
 
 <template>
@@ -34,16 +15,16 @@ def about():
       <div class="max-w-5xl mx-auto my-12">
         <!-- 標題區域 -->
         <div class="text-center mb-16">
-          <h1 class="text-4xl font-bold text-gray-900 mb-4">FastAPI Client Library</h1>
-          <p class="text-xl text-gray-600">強大且易用的 FastAPI 前端整合方案</p>
+          <h1 class="text-4xl font-bold text-gray-900 mb-4">{{ title }}</h1>
+          <p class="text-xl text-gray-600">{{ subtitle }}</p>
         </div>
 
         <!-- 功能特點 -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
           <div v-for="feature in features" :key="feature.title"
             class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
             <h3 class="text-xl font-semibold text-gray-800 mb-2">{{ feature.title }}</h3>
-            <p class="text-gray-600">{{ feature.desc }}</p>
+            <p class="text-gray-600">{{ feature.description }}</p>
           </div>
         </div>
 
@@ -56,12 +37,15 @@ def about():
         </div>
 
         <!-- 使用示例 -->
-        <div class="bg-gray-900 rounded-b-lg p-4 font-mono text-sm">
-          <pre class="language-python">
-            <code class="text-gray-300">
-              {{ codeExample }}
-            </code>
-          </pre>
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+          <div class="bg-gray-700 px-4 py-2">
+            <h3 class="text-white font-semibold">使用範例</h3>
+          </div>
+          <div class="bg-gray-900 p-4 font-mono text-sm">
+            <pre class="language-python">
+              <code class="text-gray-300">{{ code_example }}</code>
+            </pre>
+          </div>
         </div>
       </div>
     </template>

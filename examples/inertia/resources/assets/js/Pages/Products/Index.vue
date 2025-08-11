@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/js/Layouts/AppLayout.vue'
+import { Link } from '@inertiajs/vue3'
 
 const props = defineProps({
   items: {
@@ -27,7 +28,7 @@ const props = defineProps({
             class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
             <!-- 產品圖片 -->
             <div class="aspect-w-1 aspect-h-1 w-full">
-              <img :src="item.image" :alt="item.name" class="w-full h-full object-cover object-center">
+              <img :src="item.image" :alt="item.name" class="w-full h-48 object-cover object-center">
             </div>
 
             <!-- 產品資訊 -->
@@ -35,14 +36,25 @@ const props = defineProps({
               <h2 class="text-lg font-semibold text-gray-800 mb-2">{{ item.name }}</h2>
               <p class="text-gray-600 text-sm mb-4">{{ item.description }}</p>
               <div class="flex items-center justify-between">
-                <span class="text-lg font-bold text-indigo-600">{{ item.price }}</span>
-                <button
-                  class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 transition-colors">
-                  加入購物車
-                </button>
+                <span class="text-lg font-bold text-indigo-600">${{ item.price }}</span>
+                <div class="space-x-2">
+                  <Link :href="`/products/${item.id}`"
+                    class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors">
+                    詳情
+                  </Link>
+                  <button
+                    class="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700 transition-colors">
+                    購買
+                  </button>
+                </div>
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- 空狀態 -->
+        <div v-if="!items.length" class="text-center py-12">
+          <div class="text-gray-500 text-lg">目前沒有商品</div>
         </div>
       </div>
     </template>
