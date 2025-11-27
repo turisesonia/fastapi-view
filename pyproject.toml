@@ -19,7 +19,7 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dependencies = ["fastapi>=0.70.0", "Jinja2>=3.0.0"]
+dependencies = ["fastapi>=0.70.0", "Jinja2>=3.0.0", "pydantic-settings>=2.12.0"]
 
 [project.optional-dependencies]
 dev = [
@@ -63,13 +63,3 @@ build-backend = "hatchling.build"
 addopts = "-v"
 testpaths = ["tests", "integration"]
 filterwarnings = ["ignore::DeprecationWarning"]
-
-
-[tool.ruff]
-select = ["E", "F", "I", "UP"]
-target-version = "py310"
-ignore = ["UP032", "UP007", "I001"]
-
-[tool.ruff.lint.pycodestyle]
-ignore-overlong-task-comments = true
-max-line-length = 300
