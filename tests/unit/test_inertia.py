@@ -1,6 +1,4 @@
 import json
-import os
-from collections.abc import Generator
 from unittest.mock import Mock, patch
 
 import pytest
@@ -14,15 +12,10 @@ from fastapi_view.view import ViewContext
 
 
 @pytest.fixture(autouse=True)
-def setup_test_env() -> Generator[None, None, None]:
+def setup_test_env(monkeypatch):
     """Set up test environment variables"""
-    os.environ["FV_INERTIA_ROOT_TEMPLATE"] = "app.html"
-    os.environ["FV_INERTIA_ASSETS_VERSION"] = "1.0.0"
-
-    yield
-
-    os.environ.pop("FV_INERTIA_ROOT_TEMPLATE", None)
-    os.environ.pop("FV_INERTIA_ASSETS_VERSION", None)
+    monkeypatch.setenv("FV_INERTIA_ROOT_TEMPLATE", "app.html")
+    monkeypatch.setenv("FV_INERTIA_ASSETS_VERSION", "1.0.0")
 
 
 @pytest.fixture

@@ -1,4 +1,3 @@
-import os
 from jinja2.environment import Template
 import pytest
 
@@ -8,7 +7,11 @@ from fastapi.templating import Jinja2Templates
 
 from fastapi_view.view import ViewContext, get_view_context
 
-os.environ["FV_TEMPLATES_PATH"] = "tests/templates"
+
+@pytest.fixture(autouse=True)
+def setup_test_env(monkeypatch):
+    """Set up test environment variables"""
+    monkeypatch.setenv("FV_TEMPLATES_PATH", "tests/templates")
 
 
 @pytest.fixture
