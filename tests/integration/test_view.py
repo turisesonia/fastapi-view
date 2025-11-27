@@ -1,5 +1,4 @@
 import pytest
-import os
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -9,8 +8,8 @@ from fastapi_view import ViewDepends
 
 
 @pytest.fixture
-def app() -> FastAPI:
-    os.environ["FV_TEMPLATES_PATH"] = "tests/templates"
+def app(monkeypatch) -> FastAPI:
+    monkeypatch.setenv("FV_TEMPLATES_PATH", "tests/templates")
 
     app = FastAPI(title="Test app")
 
