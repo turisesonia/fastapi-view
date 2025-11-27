@@ -2,7 +2,12 @@ import typing as t
 from fastapi import Depends, Request, HTTPException, status
 from fastapi.templating import Jinja2Templates
 
-from fastapi_view.inertia import Inertia, InertiaConfig, ViteConfig, inertia_dependency
+from fastapi_view.inertia import (
+    Inertia,
+    InertiaSettings,
+    ViteSettings,
+    get_inertia_context,
+)
 
 from .config import (
     VIEWS_PATH,
@@ -11,14 +16,14 @@ from .config import (
     VITE_DEV_MODE,
     VITE_MANIFEST_PATH,
     VITE_DIST_PATH,
-    VITE_DIST_URI_PREFIX
+    VITE_DIST_URI_PREFIX,
 )
 
 # Inertia 設定
-inertia_config = InertiaConfig(
+inertia_config = InertiaSettings(
     root_template=INERTIA_ROOT_TEMPLATE,
     assets_version=INERTIA_ASSETS_VERSION,
-    vite_config=ViteConfig(
+    vite_config=ViteSettings(
         dev_mode=VITE_DEV_MODE,
         manifest_path=VITE_MANIFEST_PATH,
         dist_path=VITE_DIST_PATH,
@@ -27,24 +32,20 @@ inertia_config = InertiaConfig(
 )
 
 
-def inertia_with_shared_props(
-    templates: Jinja2Templates, config: InertiaConfig
-):
+def inertia_with_shared_props(templates: Jinja2Templates, config: InertiaSettings):
     """建立包含 shared props 的 Inertia 依賴"""
-    from fastapi_view.inertia import inertia_dependency
-    
+
     def _dependency(request: Request):
-        inertia_instance = inertia_dependency(templates, config)(request)
-        
+        inertia_instance = get_inertia_context(templates, config)(request)
+
         # 設定 shared props - 將用戶資訊共享給所有頁面
         user = get_current_user(request)
-        inertia_instance.share("auth", {
-            "user": user
-        })
-        
+        inertia_instance.share("auth", {"user": user})
+
         return inertia_instance
-    
+
     return _dependency
+
 
 # Inertia 依賴注入
 InertiaDepend = t.Annotated[
@@ -70,8 +71,7 @@ def require_login(request: Request) -> dict:
     if not user:
         # 使用 Inertia 重定向到登入頁面
         raise HTTPException(
-            status_code=status.HTTP_302_FOUND,
-            headers={"Location": "/auth/login"}
+            status_code=status.HTTP_302_FOUND, headers={"Location": "/auth/login"}
         )
     return user
 

@@ -4,6 +4,7 @@ from fastapi.responses import RedirectResponse
 from ..depends import InertiaDepend
 from .schemas import LoginRequest
 from .services import AuthService
+from typing import Annotated
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -21,7 +22,7 @@ def login(
     request: Request,
     inertia: InertiaDepend,
     login_data: LoginRequest,
-    auth_service: AuthService = Depends(),
+    auth_service: Annotated[AuthService, Depends()],
 ):
     user = auth_service.authenticate_user(login_data.username, login_data.password)
 

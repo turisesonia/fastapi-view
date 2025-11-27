@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 
 from ..depends import InertiaDepend, RequireLogin
 from .services import ProductService
+from typing import Annotated
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -10,7 +11,7 @@ router = APIRouter(prefix="/products", tags=["products"])
 def list_products(
     inertia: InertiaDepend,
     user: RequireLogin,
-    service: ProductService = Depends()
+    service: Annotated[ProductService, Depends()]
 ):
     """商品列表頁面"""
     products = service.get_all_products()
@@ -22,7 +23,7 @@ def product_detail(
     product_id: int,
     inertia: InertiaDepend,
     user: RequireLogin,
-    service: ProductService = Depends()
+    service: Annotated[ProductService, Depends()]
 ):
     """商品詳情頁面"""
     product = service.get_product_by_id(product_id)

@@ -1,40 +1,50 @@
 import json
 from urllib.parse import urljoin
 
-from fastapi.templating import Jinja2Templates
+from jinja2.ext import Extension
+from jinja2.environment import Environment
 
-from .config import ViteConfig
+from .config import ViteSettings
 
 
-class Vite:
-    def __init__(self, templates: Jinja2Templates, config: ViteConfig):
-        self._config = config
+class ViteExtension(Extension):
+    """Jinja2 Extension for Vite asset management."""
+
+    tags = {"vite_hmr_client", "vite_asset"}
+
+    def __init__(self, environment: Environment):
+        super().__init__(environment)
+
+        self._settings = ViteSettings()
         self._manifest: dict | None = None
 
-        templates.env.globals["vite_hmr_client"] = self.vite_hmr_client
-        templates.env.globals["vite_asset"] = self.vite_asset
+        environment.globals["vite_hmr_client"] = self.vite_hmr_client
+        environment.globals["vite_asset"] = self.vite_asset
 
     def vite_hmr_client(self) -> str:
-        if not self._config.dev_mode:
+        if not self._settings.dev_mode:
             # production mode do not return HMR client.
             return ""
 
         return self._script_tag(
-            src=self._config.dev_websocket_url,
+            src=self._settings.dev_websocket_url,
             attrs={"type": "module"},
         )
 
     def vite_asset(self, asset_path: str) -> str:
+        if self._settings is None:
+            raise RuntimeError("ViteExtension not configured. Call configure() first.")
+
         asset_path = asset_path.lstrip("/")
 
-        if self._config.dev_mode:
+        if self._settings.dev_mode:
             return self._dev_mode_asset(asset_path)
         else:
             return self._prod_mode_asset(asset_path)
 
     def _dev_mode_asset(self, asset_path: str) -> str:
         return self._script_tag(
-            src=f"{self._config.dev_server_url}/{asset_path}",
+            src=f"{self._settings.dev_server_url}/{asset_path}",
             attrs={"type": "module"},
         )
 
@@ -58,7 +68,7 @@ class Vite:
         return "\n".join(asset_tags)
 
     def _load_manifest(self):
-        with open(self._config.manifest_path) as f:
+        with open(self._settings.manifest_path) as f:
             self._manifest = json.load(f)
 
     def _css_assets_handle(self, asset_path: str, processed: list[str]):
@@ -99,9 +109,9 @@ class Vite:
 
     def _get_production_url(self, file: str) -> str:
         prefix = (
-            self._config.static_url
-            if self._config.static_url
-            else self._config.dist_uri_prefix
+            self._settings.static_url
+            if self._settings.static_url
+            else self._settings.dist_uri_prefix
         )
 
         if not prefix.endswith("/"):

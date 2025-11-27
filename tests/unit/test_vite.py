@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from fastapi.templating import Jinja2Templates
 
-from fastapi_view.inertia.config import ViteConfig
+from fastapi_view.inertia.config import ViteSettings
 from fastapi_view.inertia.vite import Vite
 
 
@@ -52,23 +52,23 @@ def manifest() -> dict:
 
 
 @pytest.fixture
-def dev_config() -> ViteConfig:
-    return ViteConfig(dev_mode=True)
+def dev_config() -> ViteSettings:
+    return ViteSettings(dev_mode=True)
 
 
 @pytest.fixture
-def prod_config_with_dist_prefix() -> ViteConfig:
-    return ViteConfig(dev_mode=False, dist_uri_prefix="/static")
+def prod_config_with_dist_prefix() -> ViteSettings:
+    return ViteSettings(dev_mode=False, dist_uri_prefix="/static")
 
 
 @pytest.fixture
-def prod_config_with_static_url() -> ViteConfig:
-    return ViteConfig(dev_mode=False, static_url="https://cdn.example.com")
+def prod_config_with_static_url() -> ViteSettings:
+    return ViteSettings(dev_mode=False, static_url="https://cdn.example.com")
 
 
 @pytest.fixture
-def custom_dev_config() -> ViteConfig:
-    return ViteConfig(
+def custom_dev_config() -> ViteSettings:
+    return ViteSettings(
         dev_mode=True,
         dev_server_protocol="https",
         dev_server_host="custom.local",
@@ -78,26 +78,28 @@ def custom_dev_config() -> ViteConfig:
 
 
 @pytest.fixture
-def dev_vite(templates: Jinja2Templates, dev_config: ViteConfig) -> Vite:
+def dev_vite(templates: Jinja2Templates, dev_config: ViteSettings) -> Vite:
     return Vite(templates, dev_config)
 
 
 @pytest.fixture
 def prod_vite_with_dist_prefix(
-    templates: Jinja2Templates, prod_config_with_dist_prefix: ViteConfig
+    templates: Jinja2Templates, prod_config_with_dist_prefix: ViteSettings
 ) -> Vite:
     return Vite(templates, prod_config_with_dist_prefix)
 
 
 @pytest.fixture
 def prod_vite_with_static_url(
-    templates: Jinja2Templates, prod_config_with_static_url: ViteConfig
+    templates: Jinja2Templates, prod_config_with_static_url: ViteSettings
 ) -> Vite:
     return Vite(templates, prod_config_with_static_url)
 
 
 @pytest.fixture
-def custom_dev_vite(templates: Jinja2Templates, custom_dev_config: ViteConfig) -> Vite:
+def custom_dev_vite(
+    templates: Jinja2Templates, custom_dev_config: ViteSettings
+) -> Vite:
     return Vite(templates, custom_dev_config)
 
 
@@ -108,7 +110,7 @@ def prod_vite_with_manifest(prod_vite_with_dist_prefix: Vite, manifest: dict) ->
 
 
 def test_vite_config_in_dev_mode(
-    templates: Jinja2Templates, dev_config: ViteConfig, dev_vite: Vite
+    templates: Jinja2Templates, dev_config: ViteSettings, dev_vite: Vite
 ):
     assert dev_config.dev_mode is True
     assert dev_config.dev_server_url == "http://localhost:5173"
@@ -125,18 +127,18 @@ def test_vite_config_in_dev_mode(
 
 def test_vite_config_in_production_mode():
     with pytest.raises(ValueError):
-        ViteConfig(dev_mode=False)
+        ViteSettings(dev_mode=False)
 
 
 def test_vite_config_production_with_dist_uri_prefix(
-    prod_config_with_dist_prefix: ViteConfig, prod_vite_with_dist_prefix: Vite
+    prod_config_with_dist_prefix: ViteSettings, prod_vite_with_dist_prefix: Vite
 ):
     assert prod_config_with_dist_prefix.dev_mode is False
     assert prod_config_with_dist_prefix.dist_uri_prefix == "/static"
 
 
 def test_vite_config_production_with_static_url(
-    prod_config_with_static_url: ViteConfig, prod_vite_with_static_url: Vite
+    prod_config_with_static_url: ViteSettings, prod_vite_with_static_url: Vite
 ):
     assert prod_config_with_static_url.dev_mode is False
     assert prod_config_with_static_url.static_url == "https://cdn.example.com"
@@ -181,7 +183,7 @@ def test_generate_link_tag_with_static_url(prod_vite_with_static_url: Vite):
     )
 
 
-def test_dev_vite_setup(dev_config: ViteConfig, dev_vite: Vite):
+def test_dev_vite_setup(dev_config: ViteSettings, dev_vite: Vite):
     assert dev_config.dev_server_url == "http://localhost:5173"
     assert dev_config.dev_websocket_url == "http://localhost:5173/@vite/client"
 
@@ -204,7 +206,7 @@ def test_prd_vite_asset(prod_vite_with_manifest: Vite):
 
 
 def test_vite_custom_dev_server_config(
-    custom_dev_config: ViteConfig, custom_dev_vite: Vite
+    custom_dev_config: ViteSettings, custom_dev_vite: Vite
 ):
     assert custom_dev_config.dev_server_url == "https://custom.local:3000"
     assert (

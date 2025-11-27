@@ -9,9 +9,8 @@ from fastapi.testclient import TestClient
 from pydantic import BaseModel
 from pyquery import PyQuery as pq
 
-from fastapi_view.inertia import Inertia, InertiaConfig
+from fastapi_view.inertia import Inertia, get_inertia_context
 from fastapi_view.inertia.enums import InertiaHeader
-from fastapi_view.inertia.inertia import inertia_dependency
 from fastapi_view.inertia.props import OptionalProp
 
 templates_path = Path(os.path.abspath("tests/templates"))
@@ -24,16 +23,15 @@ class User(BaseModel):
     created_at: datetime = datetime.now()
 
 
+# 設置環境變數以配置 templates 路徑
+os.environ["FV_TEMPLATES_PATH"] = str(templates_path)
+os.environ["FV_INERTIA_ROOT_TEMPLATE"] = "inertia.html"
+os.environ["FV_INERTIA_ASSETS_VERSION"] = "1.0.0"
+# 設置 Vite 為 dev 模式以避免需要 production 配置
+os.environ["FV_VITE_DEV_MODE"] = "true"
+
 app = FastAPI(title="Inertia Integration Test App")
-InertiaDepends = t.Annotated[
-    Inertia,
-    Depends(
-        inertia_dependency(
-            templates_path,
-            InertiaConfig(root_template="inertia.html", assets_version="1.0.0"),
-        )
-    ),
-]
+InertiaDepends = t.Annotated[Inertia, Depends(get_inertia_context)]
 
 
 @app.get("/")

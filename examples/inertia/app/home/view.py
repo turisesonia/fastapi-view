@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends
 
-from ..depends import InertiaDepend, RequireLogin, CurrentUser
+from ..depends import InertiaDepend, RequireLogin
 from ..product.services import ProductService
+from typing import Annotated
 
 router = APIRouter(tags=["pages"])
 
@@ -10,7 +11,7 @@ router = APIRouter(tags=["pages"])
 def home(
     inertia: InertiaDepend,
     user: RequireLogin,
-    product_service: ProductService = Depends(),
+    product_service: Annotated[ProductService, Depends()],
 ):
     """首頁"""
     featured_products = product_service.get_featured_products()
@@ -52,12 +53,12 @@ def about(inertia: InertiaDepend, user: RequireLogin):
             ],
             "code_example": """
 from fastapi import FastAPI, Depends
-from fastapi_view.inertia import Inertia, inertia_dependency
+from fastapi_view.inertia import Inertia, get_inertia_context
 
 app = FastAPI()
 
 @app.get("/")
-def index(inertia: Inertia = Depends(inertia_dependency)):
+def index(inertia: Inertia = Depends(get_inertia_context)):
     return inertia.render("Index", {"message": "Hello World"})
 """.strip(),
         },
