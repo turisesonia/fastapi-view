@@ -1,3 +1,9 @@
-from fastapi_view.view import View, view_dependency
+from typing import Annotated
 
-__all__ = ["View", "view_dependency"]
+from fastapi import Depends
+
+from .view import ViewContext, get_view_context
+
+ViewDepends = Annotated[ViewContext, Depends(get_view_context)]
+
+__all__ = ["ViewContext", "get_view_context", "ViewDepends"]

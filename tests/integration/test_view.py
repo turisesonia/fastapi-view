@@ -1,44 +1,30 @@
-import os
-import typing as t
-from pathlib import Path
+import pytest
 
-from fastapi import Depends, FastAPI, Request
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from jinja2 import Template
 from pyquery import PyQuery as pq
 
-from fastapi_view.view import View, view_dependency
-
-templates_path = Path(os.path.abspath("tests/templates"))
+from fastapi_view import ViewDepends
 
 
-def test_initital_view():
-    view = View(
-        templates=Jinja2Templates(directory=templates_path),
-        request=Request(scope={"type": "http", "path": "/"}),
-    )
+@pytest.fixture
+def app(monkeypatch) -> FastAPI:
+    monkeypatch.setenv("FV_TEMPLATES_PATH", "tests/templates")
 
-    assert isinstance(view._templates, Jinja2Templates)
-    assert isinstance(view._templates.get_template("index.html"), Template)
+    app = FastAPI(title="Test app")
 
+    @app.get("/")
+    def index(view: ViewDepends, name: str = "World"):
+        return view.render("index", {"name": name})
 
-app = FastAPI(title="Test app")
+    @app.get("/about")
+    def about(view: ViewDepends, message: str = "Hello World"):
+        return view.render("about", {"message": message})
 
-ViewDepends = t.Annotated[View, Depends(view_dependency(templates_path))]
-
-
-@app.get("/")
-def index(view: ViewDepends, name: str = "World"):
-    return view.render("index", {"name": name})
+    return app
 
 
-@app.get("/about")
-def about(view: ViewDepends, message: str = "Hello World"):
-    return view.render("about", {"message": message})
-
-
-def test_view_response():
+def test_view_response(app: FastAPI):
     with TestClient(app) as client:
         response = client.get("/")
 
@@ -47,7 +33,7 @@ def test_view_response():
         assert response.template.name == "index.html"
 
 
-def test_access_about():
+def test_access_about(app: FastAPI):
     with TestClient(app) as client:
         message = "This is about page"
         response = client.get("/about", params={"message": message})

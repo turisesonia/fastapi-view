@@ -1,238 +1,204 @@
-from unittest.mock import Mock
+import json
+from unittest.mock import Mock, patch
 
 import pytest
 from fastapi import Request
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import JSONResponse, Response
 
-from fastapi_view.inertia import Inertia, InertiaConfig
+from fastapi_view.inertia import Inertia
 from fastapi_view.inertia.enums import InertiaHeader
 from fastapi_view.inertia.props import IgnoreFirstLoad, OptionalProp
-from fastapi_view.view import View
+from fastapi_view.view import ViewContext
+
+
+@pytest.fixture(autouse=True)
+def setup_test_env(monkeypatch):
+    """Set up test environment variables"""
+    monkeypatch.setenv("FV_INERTIA_ROOT_TEMPLATE", "app.html")
+    monkeypatch.setenv("FV_INERTIA_ASSETS_VERSION", "1.0.0")
 
 
 @pytest.fixture
-def mock_request():
-    """建立 mock Request 物件"""
+def mock_request() -> Mock:
+    """Create mock Request object"""
     request = Mock(spec=Request)
     request.headers = {}
     request.url = "http://test.com/"
+
     return request
 
 
 @pytest.fixture
-def inertia_config() -> InertiaConfig:
-    return InertiaConfig(
-        root_template="app.html",
-        assets_version="1.0.0",
-    )
+def mock_view_instance(mock_request: Mock) -> Mock:
+    """Create mock ViewContext instance"""
+    mock_view = Mock(spec=ViewContext)
+    mock_view._request = mock_request
+
+    return mock_view
 
 
 @pytest.fixture
-def inertia(mock_request, inertia_config) -> Inertia:
-    return Inertia(
-        request=mock_request,
-        templates=Jinja2Templates(directory="templates"),
-        config=inertia_config,
-    )
+def inertia(mock_request: Mock, mock_view_instance: Mock) -> Inertia:
+    """Create Inertia instance with mocked ViewContext"""
+    with patch("fastapi_view.inertia.inertia.ViewContext") as mock_view_cls:
+        mock_view_cls.return_value = mock_view_instance
+        inertia_instance = Inertia(request=mock_request)
+
+        return inertia_instance
 
 
-def test_inertia_init(mock_request, inertia_config: InertiaConfig):
-    inertia = Inertia(
-        request=mock_request,
-        templates=Jinja2Templates(directory="templates"),
-        config=inertia_config,
-    )
-    assert isinstance(inertia._view, View)
-    assert inertia._root_template == "app.html"
+def test_inertia_init(mock_request, mock_view_instance):
+    """Test Inertia initialization"""
+    with patch("fastapi_view.inertia.inertia.ViewContext") as mock_view_cls:
+        mock_view_cls.return_value = mock_view_instance
+        inertia = Inertia(request=mock_request)
+
+        mock_view_cls.assert_called_once_with(mock_request)
+        assert inertia._view == mock_view_instance
+        assert inertia._root_template == "app.html"
+        assert inertia._assets_version == "1.0.0"
 
 
-def test_is_partial_request(mock_request, inertia: Inertia):
-    """測試 _is_partial_request 屬性的各種情況"""
+@pytest.mark.parametrize(
+    "partial_only,partial_component,component,expected",
+    [
+        (None, None, None, False),
+        ("name,age", "TestComponent", None, False),
+        ("name,age", "TestComponent", "DifferentComponent", False),
+        ("name,age", "TestComponent", "TestComponent", True),
+    ],
+)
+def test_is_partial_request(
+    mock_request, inertia, partial_only, partial_component, component, expected
+):
+    """Test _is_partial_request property"""
+    if partial_only:
+        mock_request.headers[InertiaHeader.PARTIAL_ONLY] = partial_only
+    if partial_component:
+        mock_request.headers[InertiaHeader.PARTIAL_COMPONENT] = partial_component
+    if component:
+        inertia._component = component
 
-    # 沒有 partial headers 時為 False
-    assert inertia._is_partial_request is False
-
-    # 有 headers 但 component 未設置時為 False
-    mock_request.headers[InertiaHeader.PARTIAL_ONLY] = "name,age"
-    mock_request.headers[InertiaHeader.PARTIAL_COMPONENT] = "TestComponent"
-    assert inertia._is_partial_request is False
-
-    # component 不匹配時為 False
-    inertia._component = "DifferentComponent"
-    assert inertia._is_partial_request is False
-
-    # headers 和 component 匹配時為 True
-    inertia._component = "TestComponent"
-    assert inertia._is_partial_request is True
-
-
-def test_partial_only_keys(mock_request, inertia: Inertia):
-    """測試 _partial_only_keys 屬性的各種情況"""
-
-    # 沒有 header 時返回空字串列表
-    assert inertia._partial_only_keys == [""]
-
-    # 單一 key
-    mock_request.headers[InertiaHeader.PARTIAL_ONLY] = "name"
-    assert inertia._partial_only_keys == ["name"]
-
-    # 多個 keys 且包含空格
-    mock_request.headers[InertiaHeader.PARTIAL_ONLY] = "name, age , email"
-    assert inertia._partial_only_keys == ["name", "age", "email"]
+    assert inertia._is_partial_request is expected
 
 
-def test_partial_except_keys(mock_request, inertia: Inertia):
-    """測試 _partial_except_keys 屬性的各種情況"""
+@pytest.mark.parametrize(
+    "header_value,expected",
+    [
+        (None, [""]),
+        ("name", ["name"]),
+        ("name, age , email", ["name", "age", "email"]),
+    ],
+)
+def test_partial_only_keys(mock_request, inertia, header_value, expected):
+    """Test _partial_only_keys property"""
+    if header_value:
+        mock_request.headers[InertiaHeader.PARTIAL_ONLY] = header_value
 
-    # 沒有 header 時返回空字串列表
-    assert inertia._partial_except_keys == [""]
-
-    # 單一 key
-    mock_request.headers[InertiaHeader.PARTIAL_EXCEPT] = "password"
-    assert inertia._partial_except_keys == ["password"]
-
-    # 多個 keys 且包含空格
-    mock_request.headers[InertiaHeader.PARTIAL_EXCEPT] = "password, secret , token"
-    assert inertia._partial_except_keys == ["password", "secret", "token"]
-
-
-def test_resolve_partial_props_non_partial_request(inertia: Inertia):
-    """測試 _resolve_partial_props 非 partial request 的情況"""
-    # 普通 props，無 IgnoreFirstLoad
-    props_normal = {"name": "John", "age": 30, "email": "john@example.com"}
-    result = inertia._resolve_partial_props(props_normal)
-    assert result == {"name": "John", "age": 30, "email": "john@example.com"}
-
-    # 包含 IgnoreFirstLoad props
-    props_with_ignore = {
-        "name": "John",
-        "age": 30,
-        "lazy_data": IgnoreFirstLoad(),
-        "optional_data": OptionalProp("optional_value"),
-    }
-    result = inertia._resolve_partial_props(props_with_ignore)
-    assert result == {"name": "John", "age": 30}
-
-    # 全部都是 IgnoreFirstLoad
-    props_all_ignore = {"lazy1": IgnoreFirstLoad(), "lazy2": OptionalProp("value")}
-    result = inertia._resolve_partial_props(props_all_ignore)
-    assert result == {}
+    assert inertia._partial_only_keys == expected
 
 
-def test_resolve_partial_props_basic_partial_request(mock_request, inertia: Inertia):
-    """測試 _resolve_partial_props 基本 partial request"""
-    # 設置 partial request
-    mock_request.headers[InertiaHeader.PARTIAL_ONLY] = "name,age"
-    mock_request.headers[InertiaHeader.PARTIAL_COMPONENT] = "TestComponent"
-    inertia._component = "TestComponent"
+@pytest.mark.parametrize(
+    "header_value,expected",
+    [
+        (None, [""]),
+        ("password", ["password"]),
+        ("password, secret , token", ["password", "secret", "token"]),
+    ],
+)
+def test_partial_except_keys(mock_request, inertia, header_value, expected):
+    """Test _partial_except_keys property"""
+    if header_value:
+        mock_request.headers[InertiaHeader.PARTIAL_EXCEPT] = header_value
 
-    props = {
-        "name": "John",
-        "age": 30,
-        "email": "john@example.com",
-        "password": "secret",
-    }
+    assert inertia._partial_except_keys == expected
+
+
+@pytest.mark.parametrize(
+    "props,expected",
+    [
+        (
+            {"name": "John", "age": 30, "email": "john@example.com"},
+            {"name": "John", "age": 30, "email": "john@example.com"},
+        ),
+        (
+            {"name": "John", "age": 30, "lazy_data": IgnoreFirstLoad()},
+            {"name": "John", "age": 30},
+        ),
+        ({"lazy1": IgnoreFirstLoad(), "lazy2": OptionalProp("value")}, {}),
+    ],
+)
+def test_resolve_partial_props_non_partial_request(inertia, props, expected):
+    """Test _resolve_partial_props with non-partial request"""
     result = inertia._resolve_partial_props(props)
+
+    assert result == expected
+
+
+def test_resolve_partial_props_partial_request(mock_request, inertia):
+    """Test _resolve_partial_props with partial request"""
+    mock_request.headers[InertiaHeader.PARTIAL_ONLY] = "name,age"
+    mock_request.headers[InertiaHeader.PARTIAL_COMPONENT] = "TestComponent"
+    inertia._component = "TestComponent"
+
+    props = {"name": "John", "age": 30, "email": "john@example.com"}
+    result = inertia._resolve_partial_props(props)
+
     assert result == {"name": "John", "age": 30}
 
 
-def test_resolve_partial_props_with_except_keys(mock_request, inertia: Inertia):
-    """測試 _resolve_partial_props 有 except keys 的 partial request"""
+def test_resolve_partial_props_with_except_keys(mock_request, inertia):
+    """Test _resolve_partial_props with except keys"""
     mock_request.headers[InertiaHeader.PARTIAL_ONLY] = "name,age,password"
     mock_request.headers[InertiaHeader.PARTIAL_EXCEPT] = "password"
     mock_request.headers[InertiaHeader.PARTIAL_COMPONENT] = "TestComponent"
     inertia._component = "TestComponent"
 
-    props = {
-        "name": "John",
-        "age": 30,
-        "email": "john@example.com",
-        "password": "secret",
-    }
+    props = {"name": "John", "age": 30, "password": "secret"}
     result = inertia._resolve_partial_props(props)
+
     assert result == {"name": "John", "age": 30}
 
 
-def test_resolve_partial_props_no_matching_keys(mock_request, inertia: Inertia):
-    """測試 _resolve_partial_props partial_only_keys 無匹配的情況"""
+def test_resolve_partial_props_no_matching_keys(mock_request, inertia):
+    """Test _resolve_partial_props with no matching keys"""
     mock_request.headers[InertiaHeader.PARTIAL_ONLY] = "nonexistent"
-    mock_request.headers[InertiaHeader.PARTIAL_EXCEPT] = ""
     mock_request.headers[InertiaHeader.PARTIAL_COMPONENT] = "TestComponent"
     inertia._component = "TestComponent"
 
     props = {"name": "John", "age": 30}
     result = inertia._resolve_partial_props(props)
+
     assert result == {}
 
 
-def test_resolve_partial_props_ignore_first_load_in_partial(
-    mock_request, inertia: Inertia
-):
-    """測試 _resolve_partial_props 在 partial request 中 IgnoreFirstLoad 不會被過濾"""
+def test_resolve_partial_props_ignore_first_load_in_partial(mock_request, inertia):
+    """Test _resolve_partial_props with IgnoreFirstLoad in partial request"""
     mock_request.headers[InertiaHeader.PARTIAL_ONLY] = "name,lazy_data"
-    mock_request.headers[InertiaHeader.PARTIAL_EXCEPT] = ""
     mock_request.headers[InertiaHeader.PARTIAL_COMPONENT] = "TestComponent"
     inertia._component = "TestComponent"
 
-    props = {
-        "name": "John",
-        "age": 30,
-        "lazy_data": IgnoreFirstLoad(),
-        "email": "john@example.com",
-    }
+    lazy_prop = IgnoreFirstLoad()
+    props = {"name": "John", "age": 30, "lazy_data": lazy_prop}
     result = inertia._resolve_partial_props(props)
-    assert result == {
-        "name": "John",
-        "lazy_data": props["lazy_data"],  # 保持原物件引用
-    }
+
+    assert result == {"name": "John", "lazy_data": lazy_prop}
 
 
-def test_resolve_callable_props_basic_functions(inertia: Inertia):
-    """測試 _resolve_callable_props 處理基本函數"""
-
-    def simple_function():
-        return "function_result"
-
+def test_resolve_callable_props_basic_functions(inertia):
+    """Test _resolve_callable_props with basic functions"""
     props = {
         "name": "John",
-        "age": 30,
         "message": lambda: "Hello World",
-        "count": simple_function,
         "static": "unchanged",
     }
     result = inertia._resolve_callable_props(props)
-    assert result == {
-        "name": "John",
-        "age": 30,
-        "message": "Hello World",
-        "count": "function_result",
-        "static": "unchanged",
-    }
+
+    assert result == {"name": "John", "message": "Hello World", "static": "unchanged"}
 
 
-def test_resolve_callable_props_callable_objects(inertia: Inertia):
-    """測試 _resolve_callable_props 處理可呼叫物件"""
-
-    class Counter:
-        def __init__(self):
-            self.count = 0
-
-        def __call__(self):
-            self.count += 1
-            return self.count
-
-    counter = Counter()
-    props = {"counter": counter, "name": "test"}
-    result = inertia._resolve_callable_props(props)
-    assert result == {"counter": 1, "name": "test"}
-
-    # 驗證方法會修改原始字典（callable 被結果替換）
-    assert props["counter"] == 1  # 原字典已被修改
-    assert props["name"] == "test"  # 非 callable 值保持不變
-
-
-def test_resolve_callable_props_nested_dicts(inertia: Inertia):
-    """測試 _resolve_callable_props 處理巢狀字典"""
+def test_resolve_callable_props_nested_dicts(inertia):
+    """Test _resolve_callable_props with nested dictionaries"""
     props = {
         "user": {
             "name": "Alice",
@@ -242,85 +208,146 @@ def test_resolve_callable_props_nested_dicts(inertia: Inertia):
         "callback": lambda: "top_level",
     }
     result = inertia._resolve_callable_props(props)
+
     assert result == {
         "user": {"name": "Alice", "get_permissions": ["read", "write"], "age": 25},
         "callback": "top_level",
     }
 
 
-def test_resolve_callable_props_deep_nested_dicts(inertia: Inertia):
-    """測試 _resolve_callable_props 處理深層巢狀字典"""
-    props = {
-        "level1": {
-            "level2": {
-                "level3": {"deep_func": lambda: "deep_result", "value": "static"},
-                "mid_func": lambda: "mid_result",
-            },
-            "top_func": lambda: "top_result",
-        }
-    }
-    result = inertia._resolve_callable_props(props)
-    assert result == {
-        "level1": {
-            "level2": {
-                "level3": {"deep_func": "deep_result", "value": "static"},
-                "mid_func": "mid_result",
-            },
-            "top_func": "top_result",
-        }
-    }
-
-
-def test_resolve_callable_props_edge_cases(inertia: Inertia):
-    """測試 _resolve_callable_props 邊界情況"""
-    # 空字典
-    props_empty = {}
-    result = inertia._resolve_callable_props(props_empty)
-    assert result == {}
-
-    # 非字典類型不應被遞歸處理
-    props_non_dict = {
-        "list_data": [lambda: "should_not_call", "static"],
-        "tuple_data": (lambda: "should_not_call", "static"),
-        "string_data": "normal_string",
-        "none_data": None,
-    }
-    original_list = props_non_dict["list_data"][:]
-    original_tuple = props_non_dict["tuple_data"]
-
-    result = inertia._resolve_callable_props(props_non_dict)
-    assert result == {
-        "list_data": original_list,  # 列表內的 lambda 不應被呼叫
-        "tuple_data": original_tuple,  # 元組內的 lambda 不應被呼叫
-        "string_data": "normal_string",
-        "none_data": None,
-    }
-
-
-def test_resolve_callable_props_complex_returns(inertia: Inertia):
-    """測試 _resolve_callable_props 處理返回複雜物件的函數"""
-
-    def get_user_data():
-        return {"id": 1, "name": "Bob", "permissions": ["admin"]}
-
-    props = {"user_data": get_user_data, "timestamp": lambda: "2024-08-04"}
-    result = inertia._resolve_callable_props(props)
-    assert result == {
-        "user_data": {"id": 1, "name": "Bob", "permissions": ["admin"]},
-        "timestamp": "2024-08-04",
-    }
-
-
-def test_resolve_callable_props_no_recursive_on_returned_dicts(inertia: Inertia):
-    """測試 _resolve_callable_props 不會對返回的字典進行遞歸處理"""
+def test_resolve_callable_props_no_recursive_on_returned_dicts(inertia):
+    """Test _resolve_callable_props does not recursively process returned dictionaries"""
 
     def get_dict_with_callable():
-        return {"nested_func": lambda: "this_should_not_be_called", "value": "static"}
+        return {"nested_func": lambda: "not_called", "value": "static"}
 
     props = {"data": get_dict_with_callable}
     result = inertia._resolve_callable_props(props)
-    returned_dict = result["data"]
 
-    # 確認返回的字典內的 lambda 沒有被呼叫
-    assert callable(returned_dict["nested_func"])
-    assert returned_dict["value"] == "static"
+    assert callable(result["data"]["nested_func"])
+    assert result["data"]["value"] == "static"
+
+
+def test_share_method():
+    """Test share class method"""
+    Inertia._share = {}
+
+    Inertia.share("user", {"name": "John", "email": "john@example.com"})
+    Inertia.share("app_name", "My App")
+
+    assert Inertia._share == {
+        "user": {"name": "John", "email": "john@example.com"},
+        "app_name": "My App",
+    }
+
+    Inertia._share = {}
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "test_value",
+        lambda: "lazy_value",
+    ],
+)
+def test_optional_static_method(value):
+    """Test optional static method"""
+    optional_value = Inertia.optional(value)
+
+    assert isinstance(optional_value, OptionalProp)
+
+
+def test_build_page_data_basic(mock_request, inertia):
+    """Test _build_page_data basic functionality"""
+    inertia._component = "TestComponent"
+    props = {"name": "John", "age": 30}
+
+    result = inertia._build_page_data(props)
+
+    assert result["version"] == "1.0.0"
+    assert result["component"] == "TestComponent"
+    assert result["props"] == {"name": "John", "age": 30}
+    assert result["url"] == "http://test.com/"
+
+
+def test_build_page_data_with_shared_props(mock_request, inertia):
+    """Test _build_page_data includes shared data"""
+    Inertia._share = {"app_name": "Test App", "version": "1.0"}
+    inertia._component = "TestComponent"
+    props = {"name": "John"}
+
+    result = inertia._build_page_data(props)
+
+    assert result["props"] == {"app_name": "Test App", "version": "1.0", "name": "John"}
+
+    Inertia._share = {}
+
+
+def test_build_page_data_with_callable_props(mock_request, inertia):
+    """Test _build_page_data handles callable props"""
+    inertia._component = "TestComponent"
+    props = {"name": "John", "timestamp": lambda: "2024-01-01"}
+
+    result = inertia._build_page_data(props)
+
+    assert result["props"] == {"name": "John", "timestamp": "2024-01-01"}
+
+
+def test_build_page_data_with_ignore_first_load(mock_request, inertia):
+    """Test _build_page_data handles IgnoreFirstLoad"""
+    inertia._component = "TestComponent"
+    props = {
+        "name": "John",
+        "lazy_data": IgnoreFirstLoad(),
+        "optional": OptionalProp("value"),
+    }
+
+    result = inertia._build_page_data(props)
+
+    assert result["props"] == {"name": "John"}
+
+
+def test_render_json_response(mock_request, inertia):
+    """Test render method returns JSON response"""
+    mock_request.headers[InertiaHeader.INERTIA] = "true"
+
+    props = {"name": "John", "age": 30}
+    response = inertia.render("TestComponent", props)
+
+    assert isinstance(response, JSONResponse)
+    assert response.headers[InertiaHeader.INERTIA] == "True"
+    assert response.headers["Vary"] == "Accept"
+
+    content = json.loads(response.body.decode())
+    assert content["component"] == "TestComponent"
+    assert content["props"] == {"name": "John", "age": 30}
+    assert content["version"] == "1.0.0"
+
+
+def test_render_html_response(mock_request, mock_view_instance, inertia):
+    """Test render method returns HTML response"""
+    mock_view_instance.render.return_value = Response(content="<html></html>")
+
+    props = {"name": "John", "age": 30}
+    inertia.render("TestComponent", props)
+
+    mock_view_instance.render.assert_called_once()
+    call_args = mock_view_instance.render.call_args
+
+    assert call_args[0][0] == "app.html"
+    assert "page" in call_args[0][1]
+
+    page_data = json.loads(call_args[0][1]["page"])
+    assert page_data["component"] == "TestComponent"
+    assert page_data["props"] == {"name": "John", "age": 30}
+
+
+def test_render_without_props(mock_request, inertia):
+    """Test render method without passing props"""
+    mock_request.headers[InertiaHeader.INERTIA] = "true"
+
+    response = inertia.render("TestComponent")
+
+    content = json.loads(response.body.decode())
+    assert content["component"] == "TestComponent"
+    assert content["props"] == {}

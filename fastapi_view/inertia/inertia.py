@@ -1,29 +1,44 @@
 import json
 import typing as t
-from pathlib import Path
 
 from fastapi import Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, Response
-from fastapi.templating import Jinja2Templates
 
-from ..view import View
-from .config import InertiaConfig
+from ..view import ViewContext
+from ..vite.extension import ViteExtension
+from .config import InertiaSettings
 from .enums import InertiaHeader
 from .props import IgnoreFirstLoad, OptionalProp
-from .vite import Vite
 
 
-class InertiaBase:
-    _view: View
-
-    _root_template: str
-
-    _assets_version: str | None = None
+class Inertia:
+    _view: ViewContext
 
     _component: str | None = None
 
     _share: dict = {}
+
+    def __init__(self, request: Request):
+        self._view = ViewContext(request)
+
+        self._settings = InertiaSettings()
+
+    @classmethod
+    def share(cls, key: str, value: t.Any):
+        cls._share[key] = value
+
+    @staticmethod
+    def optional(prop: t.Any):
+        return OptionalProp(prop)
+
+    @property
+    def _root_template(self) -> str:
+        return self._settings.root_template
+
+    @property
+    def _assets_version(self) -> str | None:
+        return self._settings.assets_version
 
     @property
     def _request(self) -> Request:
@@ -91,26 +106,6 @@ class InertiaBase:
 
         return props
 
-
-class Inertia(InertiaBase):
-    def __init__(
-        self,
-        request: Request,
-        templates: Jinja2Templates,
-        config: InertiaConfig,
-    ):
-        self._view = View(request, templates)
-        self._root_template = config.root_template
-        self._assets_version = config.assets_version
-
-    @classmethod
-    def share(cls, key: str, value: t.Any):
-        cls._share[key] = value
-
-    @staticmethod
-    def optional(prop: t.Any):
-        return OptionalProp(prop)
-
     def render(self, component: str, props: dict | None = None) -> Response:
         self._component = component
 
@@ -128,14 +123,9 @@ class Inertia(InertiaBase):
         return self._view.render(self._root_template, {"page": json.dumps(page_data)})
 
 
-def inertia_dependency(templates: str | Path | Jinja2Templates, config: InertiaConfig):
-    if not isinstance(templates, Jinja2Templates):
-        templates = Jinja2Templates(directory=templates)
+def get_inertia_context(request: Request):
+    inertia = Inertia(request)
 
-    if config.vite_config:
-        Vite(templates, config.vite_config)
+    inertia._view._templates.env.add_extension(ViteExtension)
 
-    def _depends(request: Request) -> Inertia:
-        return Inertia(request, templates, config)
-
-    return _depends
+    return inertia

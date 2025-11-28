@@ -140,6 +140,7 @@ cython_debug/
 
 config/deploy/*
 node_modules
-bun.lock
-
-!examples/inertia/dist
+examples/inertia/public/build/
+examples/inertia/node_modules/
+examples/inertia/.env
+examples/inertia/bun.lock

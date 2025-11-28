@@ -1,5 +1,9 @@
-from .inertia import Inertia, inertia_dependency
-from .config import InertiaConfig, ViteConfig
+from typing import Annotated
 
+from fastapi import Depends
 
-__all__ = ["Inertia", "InertiaConfig", "ViteConfig", "inertia_dependency"]
+from .inertia import Inertia, get_inertia_context
+
+InertiaDepends = Annotated[Inertia, Depends(get_inertia_context)]
+
+__all__ = ["Inertia", "get_inertia_context", "InertiaDepends"]
