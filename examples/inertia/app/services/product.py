@@ -1,5 +1,6 @@
 from typing import List
-from .schemas import ProductSchema
+
+from app.schemas.product import ProductSchema
 
 
 class ProductService:

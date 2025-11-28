@@ -1,35 +1,42 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import { resolve } from 'path'
+import { fileURLToPath, URL } from 'node:url'
 
 
-export default defineConfig({
-    base: '/public/',
-    resolve: {
-        alias: {
-            '@': resolve('/resources/assets'),
+export default defineConfig(({ mode }) => {
+    const env = loadEnv(mode, process.cwd(), '')
+
+    const viteHost = env.VITE_DEV_HOST || 'localhost'
+    const vitePort = parseInt(env.VITE_DEV_PORT || '5173')
+    const viteCorsOrigins = env.VITE_DEV_CORS_ORIGINS
+        ? env.VITE_DEV_CORS_ORIGINS.split(',').map(origin => origin.trim())
+        : ['http://localhost', 'http://127.0.0.1']
+
+    return {
+        plugins: [vue()],
+        resolve: {
+            alias: {
+                '@': fileURLToPath(new URL('./resources/assets', import.meta.url)),
+            },
         },
-    },
-
-    plugins: [
-        vue({
-            template: {
-                transformAssetUrls: {
-                    base: null,
-                    includeAbsolute: false,
+        build: {
+            manifest: true,
+            outDir: 'public/build',
+            rollupOptions: {
+                input: {
+                    app: fileURLToPath(new URL('./resources/assets/js/app.js', import.meta.url)),
                 },
             },
-        })
-    ],
-
-    build: {
-        // generate manifest.json when run vite build
-        manifest: true,
-        rollupOptions: {
-            input: {
-                app: resolve(__dirname, '/resources/assets/js/app.js'),
-            }
+        },
+        server: {
+            host: viteHost,
+            port: vitePort,
+            strictPort: true,
+            cors: {
+                origin: viteCorsOrigins,
+                credentials: true,
+            },
         },
     }
-})
-
+}
+)

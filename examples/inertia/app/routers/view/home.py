@@ -1,16 +1,17 @@
+from typing import Annotated
 from fastapi import APIRouter, Depends
 
-from ..depends import InertiaDepend, RequireLogin
-from ..product.services import ProductService
-from typing import Annotated
+from fastapi_view.inertia import InertiaDepends
+from app.security import CurrentUser
+from app.services.product import ProductService
 
 router = APIRouter(tags=["pages"])
 
 
 @router.get("/")
 def home(
-    inertia: InertiaDepend,
-    user: RequireLogin,
+    inertia: InertiaDepends,
+    user: CurrentUser,
     product_service: Annotated[ProductService, Depends()],
 ):
     """首頁"""
@@ -36,7 +37,7 @@ def home(
 
 
 @router.get("/about")
-def about(inertia: InertiaDepend, user: RequireLogin):
+def about(inertia: InertiaDepends, user: CurrentUser):
     """關於頁面"""
     return inertia.render(
         "About",

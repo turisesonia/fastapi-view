@@ -1,16 +1,15 @@
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
+from fastapi_view.inertia import InertiaDepends
 
-from ..depends import InertiaDepend
-from .schemas import LoginRequest
-from .services import AuthService
-from typing import Annotated
+from app.schemas.auth import LoginRequest
+from app.services.auth import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.get("/login")
-def login_page(request: Request, inertia: InertiaDepend):
+def login_page(request: Request, inertia: InertiaDepends):
     if request.session.get("user"):
         return RedirectResponse(url="/", status_code=303)
 
@@ -18,28 +17,26 @@ def login_page(request: Request, inertia: InertiaDepend):
 
 
 @router.post("/login")
-def login(
-    request: Request,
-    inertia: InertiaDepend,
-    login_data: LoginRequest,
-    auth_service: Annotated[AuthService, Depends()],
-):
-    user = auth_service.authenticate_user(login_data.username, login_data.password)
+def login(request: Request, inertia: InertiaDepends, body: LoginRequest):
+    service = AuthService()
+    user = service.authenticate(body.username, body.password)
 
     if not user:
         return inertia.render(
             "Auth/Login",
             {
                 "error": "用戶名或密碼錯誤",
-                "username": login_data.username,  # 保留用戶名方便重新輸入
+                "username": body.username,  # 保留用戶名方便重新輸入
             },
         )
 
     request.session["user"] = user
+
     return RedirectResponse(url="/", status_code=303)
 
 
 @router.post("/logout")
 def logout(request: Request):
-    request.session.clear()  # 清除 session
+    request.session.clear()
+
     return RedirectResponse(url="/auth/login", status_code=303)

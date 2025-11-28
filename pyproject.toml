@@ -39,7 +39,7 @@ Repository = "https://github.com/turisesonia/fastapi-view.git"
 Issues = "https://github.com/turisesonia/fastapi-view/issues"
 
 [project.scripts]
-fastapi-view-inertia = "examples.inertia.src.main:app"
+fastapi-view-inertia = "examples.inertia.app.main:app"
 
 [tool.uv]
 dev-dependencies = [

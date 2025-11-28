@@ -2,27 +2,19 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.config import DIST_PATH, SESSION_SECRET_KEY
-from examples.inertia.app.product.view import router as product_router
-from examples.inertia.app.home.view import router as home_router
-from examples.inertia.app.auth.view import router as auth_router
+from app.config import settings
+from app.routers.view.home import router as home_router
+from app.routers.view.auth import router as auth_router
+from app.routers.view.product import router as product_router
 
-app = FastAPI(
-    title="FastAPI View - Feature Organized Example",
-    description="按功能分組的 FastAPI + Inertia.js 範例應用",
-    version="1.0.0",
-)
 
-# 配置 Session 中介軟體
-app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET_KEY)
+app = FastAPI(title="FastAPI Inertia.js Example", description="", version="0.0.1")
 
-app.mount("/public", StaticFiles(directory=DIST_PATH), name="public")
+app.add_middleware(SessionMiddleware, secret_key=settings.SESSION_SECRET_KEY)
+
+if settings.STATIC_PATH.exists():
+    app.mount("/public", StaticFiles(directory=settings.STATIC_PATH), name="public")
 
 app.include_router(auth_router)
 app.include_router(home_router)
 app.include_router(product_router)
-
-
-@app.get("/health")
-def health_check():
-    return {"status": "healthy", "message": "FastAPI View application is running"}
