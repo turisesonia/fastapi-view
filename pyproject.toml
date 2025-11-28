@@ -1,6 +1,6 @@
 [project]
 name = "fastapi-view"
-version = "0.4.0"
+version = "0.5.0"
 description = "A jinja2 view template helping function for FastAPI."
 authors = [{ name = "Sam Yao", email = "turisesonia@gmail.com" }]
 license = { text = "MIT" }
@@ -19,7 +19,7 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dependencies = ["fastapi>=0.70.0", "Jinja2>=3.0.0", "pydantic-settings>=2.12.0"]
+dependencies = ["fastapi>=0.70.0", "Jinja2>=3.0.0", "pydantic-settings>=2.0.0"]
 
 [project.optional-dependencies]
 dev = [
