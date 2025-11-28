@@ -1,14 +1,7 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 
 class LoginRequest(BaseModel):
-    """登入表單資料"""
-    username: str
+    email: EmailStr
     password: str
-
-
-class User(BaseModel):
-    """用戶資料模型"""
-    id: int
-    username: str
-    display_name: str
+    remember: bool = False

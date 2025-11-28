@@ -2,19 +2,23 @@ import typing as t
 from fastapi import Depends, Request, HTTPException, status
 from fastapi_view.inertia import InertiaDepends
 
+from app.data import USERS
+
 
 def get_current_user(request: Request, inertia: InertiaDepends) -> dict:
-    user = request.session.get("user")
+    user_id = request.session.get("user_id")
+    user = USERS.get(user_id) if user_id else None
 
-    inertia.share("auth", {"user": user})
+    user_safe = {k: v for k, v in user.items() if k != "password"} if user else None
+
+    inertia.share("auth", {"user": user_safe})
 
     if not user:
-        # 使用 Inertia 重定向到登入頁面
         raise HTTPException(
-            status_code=status.HTTP_302_FOUND, headers={"Location": "/auth/login"}
+            status_code=status.HTTP_302_FOUND, headers={"Location": "/login"}
         )
 
-    return user
+    return user_safe
 
 
 CurrentUser = t.Annotated[dict, Depends(get_current_user)]

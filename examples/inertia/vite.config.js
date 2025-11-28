@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath, URL } from 'node:url'
 
 
@@ -13,7 +14,7 @@ export default defineConfig(({ mode }) => {
         : ['http://localhost', 'http://127.0.0.1']
 
     return {
-        plugins: [vue()],
+        plugins: [tailwindcss(), vue()],
         resolve: {
             alias: {
                 '@': fileURLToPath(new URL('./resources/assets', import.meta.url)),
@@ -24,7 +25,7 @@ export default defineConfig(({ mode }) => {
             outDir: 'public/build',
             rollupOptions: {
                 input: {
-                    app: fileURLToPath(new URL('./resources/assets/js/app.js', import.meta.url)),
+                    app: fileURLToPath(new URL('./resources/assets/js/app.ts', import.meta.url)),
                 },
             },
         },
