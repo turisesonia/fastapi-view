@@ -83,29 +83,34 @@
           </div>
         </div>
 
-        <!-- Flash messages -->
-        <div v-if="($page.props.flash as any)?.success" class="bg-green-500 text-white px-8 py-4">
-          {{ ($page.props.flash as any).success }}
-        </div>
-        <div v-if="($page.props.flash as any)?.error" class="bg-red-500 text-white px-8 py-4">
-          {{ ($page.props.flash as any).error }}
-        </div>
-
         <!-- Page content -->
         <div class="p-8">
           <slot />
         </div>
       </div>
     </div>
+
+    <!-- Toast notifications for flash messages -->
+    <Toast
+      v-if="flashMessage.message"
+      :type="flashMessage.type"
+      :message="flashMessage.message"
+      :duration="5000"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
+import Toast from './Toast.vue'
 
 const showUserMenu = ref(false)
 const page = usePage()
+const flashMessage = ref<{ type: 'success' | 'error' | 'warning' | 'info'; message: string }>({
+  type: 'info',
+  message: '',
+})
 
 function handleClickOutside(event: MouseEvent) {
   const target = event.target as HTMLElement
@@ -143,4 +148,24 @@ function isUrl(path: string) {
 function logout() {
   router.post('/logout')
 }
+
+// Watch for flash messages from page props
+watch(
+  () => page.props,
+  (props: any) => {
+    if (props.success) {
+      flashMessage.value = { type: 'success', message: props.success }
+    } else if (props.error) {
+      flashMessage.value = { type: 'error', message: props.error }
+    } else if (props.warning) {
+      flashMessage.value = { type: 'warning', message: props.warning }
+    } else if (props.info) {
+      flashMessage.value = { type: 'info', message: props.info }
+    } else {
+      flashMessage.value = { type: 'info', message: '' }
+    }
+  },
+  { immediate: true, deep: true }
+)
 </script>
+

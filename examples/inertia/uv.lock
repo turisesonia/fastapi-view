@@ -301,7 +301,7 @@ dev = [
 
 [[package]]
 name = "fastapi-view"
-version = "0.4.0"
+version = "0.6.0"
 source = { editable = "../../" }
 dependencies = [
     { name = "fastapi" },
@@ -316,7 +316,7 @@ requires-dist = [
     { name = "fastapi", extras = ["standard"], marker = "extra == 'dev'", specifier = ">=0.115.0" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.25.1" },
     { name = "jinja2", specifier = ">=3.0.0" },
-    { name = "pydantic-settings", specifier = ">=2.12.0" },
+    { name = "pydantic-settings", specifier = ">=2.0.0" },
     { name = "pyquery", marker = "extra == 'dev'", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.4.3" },
     { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.14.0" },
