@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse, Response
 
 from fastapi_view.inertia import Inertia
 from fastapi_view.inertia.enums import InertiaHeader
+from fastapi_view.inertia.inertia import REQUEST_SESSION_KEY, SESSION_FLASH_KEY
 from fastapi_view.inertia.props import IgnoreFirstLoad, OptionalProp
 from fastapi_view.view import ViewContext
 
@@ -24,6 +25,8 @@ def mock_request() -> Mock:
     request = Mock(spec=Request)
     request.headers = {}
     request.url = "http://test.com/"
+    request.session = None
+    request.scope = {}
 
     return request
 
@@ -351,3 +354,130 @@ def test_render_without_props(mock_request, inertia):
     content = json.loads(response.body.decode())
     assert content["component"] == "TestComponent"
     assert content["props"] == {}
+
+
+@pytest.mark.parametrize(
+    "scope,session,expected",
+    [
+        ({REQUEST_SESSION_KEY: True}, {"user": "John"}, {"user": "John"}),
+        ({}, None, None),
+    ],
+)
+def test_get_request_session(inertia, scope, session, expected):
+    """Test _get_request_session returns session or None based on middleware availability"""
+    inertia._request.scope = scope
+    inertia._request.session = session
+
+    result = inertia._get_request_session()
+
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "scope,session,expected",
+    [
+        ({}, None, {}),
+        ({REQUEST_SESSION_KEY: True}, {"user": "John"}, {}),
+        (
+            {REQUEST_SESSION_KEY: True},
+            {SESSION_FLASH_KEY: {"success": "Done"}},
+            {"success": "Done"},
+        ),
+    ],
+)
+def test_get_flash_props(inertia, scope, session, expected):
+    """Test _get_flash_props returns flash messages or empty dict"""
+    inertia._request.scope = scope
+    inertia._request.session = session
+
+    result = inertia._get_flash_props()
+
+    assert result == expected
+
+
+def test_flash_raises_error_without_session_middleware(inertia):
+    """Test flash raises RuntimeError when SessionMiddleware is not installed"""
+    inertia._request.scope = {}
+
+    with pytest.raises(RuntimeError, match="SessionMiddleware must be installed"):
+        inertia.flash("error", "This should fail")
+
+
+def test_flash_adds_and_overwrites_messages(inertia):
+    """Test flash adds new messages and overwrites existing ones"""
+    mock_session = {}
+    inertia._request.scope = {REQUEST_SESSION_KEY: True}
+    inertia._request.session = mock_session
+
+    inertia.flash("success", "First message")
+    inertia.flash("error", "Error message")
+    inertia.flash("success", "Overwritten message")
+
+    assert mock_session[SESSION_FLASH_KEY]["success"] == "Overwritten message"
+    assert mock_session[SESSION_FLASH_KEY]["error"] == "Error message"
+
+
+def test_flash_messages_are_removed_after_reading(inertia):
+    """Test flash messages are removed from session after being read"""
+    mock_session = {SESSION_FLASH_KEY: {"success": "Test message", "info": "Another message"}}
+    inertia._request.scope = {REQUEST_SESSION_KEY: True}
+    inertia._request.session = mock_session
+
+    # First read should return the flash messages
+    result = inertia._get_flash_props()
+
+    assert result == {"success": "Test message", "info": "Another message"}
+    assert SESSION_FLASH_KEY not in mock_session
+
+    # Second read should return empty dict
+    result_second = inertia._get_flash_props()
+
+    assert result_second == {}
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["string", 123, {"key": "val"}, ["list"]],
+)
+def test_flash_supports_various_value_types(inertia, value):
+    """Test flash supports various data types"""
+    mock_session = {}
+    inertia._request.scope = {REQUEST_SESSION_KEY: True}
+    inertia._request.session = mock_session
+
+    inertia.flash("data", value)
+
+    assert mock_session[SESSION_FLASH_KEY]["data"] == value
+
+
+@pytest.mark.parametrize(
+    "scope,session,shared_data,expected_props",
+    [
+        ({}, None, {}, {"user": "John"}),
+        (
+            {REQUEST_SESSION_KEY: True},
+            {SESSION_FLASH_KEY: {"success": "Done"}},
+            {},
+            {"success": "Done", "user": "John"},
+        ),
+        (
+            {REQUEST_SESSION_KEY: True},
+            {SESSION_FLASH_KEY: {"error": "Failed"}},
+            {"app": "Test"},
+            {"app": "Test", "error": "Failed", "user": "John"},
+        ),
+    ],
+)
+def test_build_page_data_with_flash_integration(
+    inertia, scope, session, shared_data, expected_props
+):
+    """Test _build_page_data correctly merges flash, shared, and regular props"""
+    Inertia._share = shared_data
+    inertia._request.scope = scope
+    inertia._request.session = session
+    inertia._component = "TestComponent"
+
+    result = inertia._build_page_data({"user": "John"})
+
+    assert result["props"] == expected_props
+    Inertia._share = {}

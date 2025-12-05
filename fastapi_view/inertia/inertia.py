@@ -11,6 +11,9 @@ from .config import InertiaSettings
 from .enums import InertiaHeader
 from .props import IgnoreFirstLoad, OptionalProp
 
+REQUEST_SESSION_KEY: str = "session"
+SESSION_FLASH_KEY: str = "flash"
+
 
 class Inertia:
     _view: ViewContext
@@ -21,7 +24,6 @@ class Inertia:
 
     def __init__(self, request: Request):
         self._view = ViewContext(request)
-
         self._settings = InertiaSettings()
 
     @classmethod
@@ -65,6 +67,8 @@ class Inertia:
         return list(map(lambda s: s.strip(), keys))
 
     def _build_page_data(self, props: dict) -> dict:
+        flash_props = self._get_flash_props()
+
         props = self._resolve_partial_props(props)
         props = self._resolve_callable_props(props)
 
@@ -72,7 +76,7 @@ class Inertia:
             {
                 "version": self._assets_version,
                 "component": self._component,
-                "props": {**self._share, **props},
+                "props": {**self._share, **flash_props, **props},
                 "url": str(self._request.url),
             }
         )
@@ -121,6 +125,32 @@ class Inertia:
             )
 
         return self._view.render(self._root_template, {"page": json.dumps(page_data)})
+
+    def flash(self, key: str, value: t.Any):
+        session = self._get_request_session()
+
+        if session is None:
+            raise RuntimeError(
+                "SessionMiddleware must be installed to use flash messages."
+            )
+
+        if SESSION_FLASH_KEY not in session:
+            session[SESSION_FLASH_KEY] = {}
+
+        session[SESSION_FLASH_KEY][key] = value
+
+    def _get_request_session(self):
+        if REQUEST_SESSION_KEY not in self._request.scope:
+            return None
+
+        return self._request.session
+
+    def _get_flash_props(self) -> dict:
+        session = self._get_request_session()
+        if session is None:
+            return {}
+
+        return session.pop(SESSION_FLASH_KEY, {})
 
 
 def get_inertia_context(request: Request):

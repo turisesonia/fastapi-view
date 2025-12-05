@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 from pyquery import PyQuery as pq
+from starlette.middleware.sessions import SessionMiddleware
 
 from fastapi_view.inertia import Inertia, InertiaDepends
 from fastapi_view.inertia.enums import InertiaHeader
@@ -261,3 +262,160 @@ def test_inertia_optional_prop_in_partial(app):
         # Specified OptionalProp should exist in partial request
         assert "lazy_data" in props
         assert props["lazy_data"] == "Lazy loaded data"
+
+
+@pytest.fixture
+def app_with_session() -> FastAPI:
+    """FastAPI app with SessionMiddleware for flash tests"""
+    app = FastAPI(title="Inertia Flash Test App")
+    app.add_middleware(SessionMiddleware, secret_key="test-secret-key")
+
+    @app.post("/create-user")
+    def create_user(inertia: InertiaDepends):
+        inertia.flash("success", "User created successfully")
+        inertia.flash("info", "Check your email for confirmation")
+
+        return inertia.render("CreateUser", {"user_id": 123})
+
+    @app.post("/update-profile")
+    def update_profile(inertia: InertiaDepends):
+        inertia.flash("success", "Profile updated")
+
+        return inertia.render("Profile", {"username": "john_doe"})
+
+    @app.get("/dashboard")
+    def dashboard(inertia: InertiaDepends):
+        Inertia.share("app_name", "Test App")
+
+        return inertia.render("Dashboard", {"stats": {"views": 100}})
+
+    @app.post("/error-action")
+    def error_action(inertia: InertiaDepends):
+        inertia.flash("error", "Operation failed")
+        inertia.flash("details", {"code": 500, "message": "Internal error"})
+
+        return inertia.render("Error", {})
+
+    return app
+
+
+def test_flash_messages_in_json_response(app_with_session):
+    """Test flash messages are included in Inertia JSON response"""
+    with TestClient(app_with_session) as client:
+        response = client.post(
+            "/create-user", headers={InertiaHeader.INERTIA: "true"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["component"] == "CreateUser"
+        assert data["props"]["user_id"] == 123
+        assert data["props"]["success"] == "User created successfully"
+        assert data["props"]["info"] == "Check your email for confirmation"
+
+
+def test_flash_messages_in_html_response(app_with_session):
+    """Test flash messages are included in HTML response"""
+    with TestClient(app_with_session) as client:
+        response = client.post("/update-profile")
+
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "text/html; charset=utf-8"
+
+        d = pq(response.text)
+        app_div = d("#app")
+        page_data = json.loads(app_div.attr("data-page"))
+
+        assert page_data["component"] == "Profile"
+        assert page_data["props"]["username"] == "john_doe"
+        assert page_data["props"]["success"] == "Profile updated"
+
+
+def test_flash_messages_with_shared_props(app_with_session):
+    """Test flash messages work correctly with shared props"""
+    with TestClient(app_with_session) as client:
+        # First request to set flash messages
+        client.post("/create-user", headers={InertiaHeader.INERTIA: "true"})
+
+        # Second request to check flash messages are combined with shared props
+        response = client.get("/dashboard", headers={InertiaHeader.INERTIA: "true"})
+
+        data = response.json()
+        props = data["props"]
+
+        assert props["app_name"] == "Test App"
+        assert props["stats"]["views"] == 100
+
+
+def test_flash_supports_complex_data_types(app_with_session):
+    """Test flash messages support complex data types"""
+    with TestClient(app_with_session) as client:
+        response = client.post(
+            "/error-action", headers={InertiaHeader.INERTIA: "true"}
+        )
+
+        data = response.json()
+        props = data["props"]
+
+        assert props["error"] == "Operation failed"
+        assert props["details"]["code"] == 500
+        assert props["details"]["message"] == "Internal error"
+
+
+def test_flash_without_session_middleware():
+    """Test flash raises error when SessionMiddleware is not installed"""
+    app_no_session = FastAPI(title="App Without Session")
+
+    @app_no_session.post("/action")
+    def action(inertia: InertiaDepends):
+        # This should raise RuntimeError
+        inertia.flash("error", "This should fail")
+
+        return inertia.render("Action", {})
+
+    with TestClient(app_no_session, raise_server_exceptions=False) as client:
+        response = client.post("/action", headers={InertiaHeader.INERTIA: "true"})
+
+        # Should return 500 error due to missing SessionMiddleware
+        assert response.status_code == 500
+
+
+def test_flash_messages_cleared_after_redirect():
+    """Test flash messages are cleared after being displayed following a redirect"""
+    from fastapi.responses import RedirectResponse
+
+    app = FastAPI(title="Flash Redirect Test")
+    app.add_middleware(SessionMiddleware, secret_key="test-secret-key")
+
+    @app.post("/submit")
+    def submit(inertia: InertiaDepends):
+        inertia.flash("success", "Form submitted successfully")
+
+        return RedirectResponse(url="/result", status_code=303)
+
+    @app.get("/result")
+    def result(inertia: InertiaDepends):
+        return inertia.render("Result", {"status": "ok"})
+
+    with TestClient(app) as client:
+        # Submit form
+        response = client.post("/submit", follow_redirects=False)
+
+        assert response.status_code == 303
+        assert response.headers["location"] == "/result"
+
+        # Follow redirect - flash message should appear here
+        response = client.get("/result", headers={InertiaHeader.INERTIA: "true"})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["props"]["success"] == "Form submitted successfully"
+
+        # Second request - flash message should be gone
+        response = client.get("/result", headers={InertiaHeader.INERTIA: "true"})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "success" not in data["props"]
+        assert data["props"]["status"] == "ok"
