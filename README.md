@@ -155,6 +155,22 @@ def users(inertia: InertiaDepends):
     })
 ```
 
+### Flash Messages
+
+Flash messages for one-time notifications (requires SessionMiddleware):
+
+```python
+from starlette.middleware.sessions import SessionMiddleware
+
+app.add_middleware(SessionMiddleware, secret_key="your-secret-key")
+
+@app.post("/login")
+def login(inertia: InertiaDepends):
+    # ... authentication logic ...
+    inertia.flash("success", "Login successful!")
+    return inertia.render("Dashboard")
+```
+
 ### Custom Response Configuration
 
 ```python

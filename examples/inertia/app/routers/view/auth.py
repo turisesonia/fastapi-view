@@ -30,11 +30,17 @@ def login(request: Request, inertia: InertiaDepends, body: LoginRequest):
 
     request.session["user_id"] = user["id"]
 
+    # Add flash message for successful login
+    inertia.flash("success", f"Welcome back, {user['first_name']}!")
+
     return RedirectResponse(url="/", status_code=303)
 
 
 @router.post("/logout")
-def logout(request: Request):
+def logout(request: Request, inertia: InertiaDepends):
     request.session.clear()
+
+    # Add flash message for logout
+    inertia.flash("info", "You have been logged out successfully.")
 
     return RedirectResponse(url="/login", status_code=303)

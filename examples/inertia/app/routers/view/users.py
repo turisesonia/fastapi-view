@@ -64,6 +64,9 @@ def store(
         "deleted_at": None,
     }
 
+    # Flash success message
+    inertia.flash("success", f"User '{data.first_name} {data.last_name}' created successfully.")
+
     return RedirectResponse(url="/users", status_code=303)
 
 
@@ -94,22 +97,31 @@ def update(
             "owner": data.owner,
         })
 
+        # Flash success message
+        inertia.flash("success", f"User '{data.first_name} {data.last_name}' updated successfully.")
+
     return RedirectResponse(url=f"/users/{user_id}/edit", status_code=303)
 
 
 @router.delete("/{user_id}")
-def destroy(user_id: int, user: CurrentUser):
+def destroy(user_id: int, inertia: InertiaDepends, user: CurrentUser):
     target_user = USERS.get(user_id)
     if target_user:
         target_user["deleted_at"] = datetime.now().isoformat()
+
+        # Flash warning message
+        inertia.flash("warning", f"User '{target_user['first_name']} {target_user['last_name']}' has been deleted.")
 
     return RedirectResponse(url="/users", status_code=303)
 
 
 @router.put("/{user_id}/restore")
-def restore(user_id: int, user: CurrentUser):
+def restore(user_id: int, inertia: InertiaDepends, user: CurrentUser):
     target_user = USERS.get(user_id)
     if target_user:
         target_user["deleted_at"] = None
+
+        # Flash info message
+        inertia.flash("info", f"User '{target_user['first_name']} {target_user['last_name']}' has been restored.")
 
     return RedirectResponse(url="/users", status_code=303)
