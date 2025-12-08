@@ -96,6 +96,7 @@ def test_inertia_html_response(app):
         page_data = json.loads(app_div.attr("data-page"))
 
         assert page_data["component"] == "Index"
+        assert page_data["props"]["flash"] == {}
         assert page_data["props"]["name"] == "Alice"
         assert page_data["props"]["message"] == "Welcome"
         assert page_data["version"] == "1.0.0"
@@ -117,6 +118,7 @@ def test_inertia_json_response(app):
 
         data = response.json()
         assert data["component"] == "Index"
+        assert data["props"]["flash"] == {}
         assert data["props"]["name"] == "Bob"
         assert data["props"]["message"] == "Welcome"
         assert data["version"] == "1.0.0"
@@ -134,6 +136,7 @@ def test_inertia_page_data_structure(app):
         assert "version" in data
         assert "url" in data
 
+        assert "flash" in data["props"]
         users = data["props"]["users"]
         assert len(users) == 3
         assert users[0]["id"] == 1
@@ -157,6 +160,7 @@ def test_inertia_partial_request(app):
         data = response.json()
 
         props = data["props"]
+        assert "flash" in props
         assert "public_data" in props
         assert "timestamp" in props
         assert "private_data" not in props
@@ -179,6 +183,7 @@ def test_inertia_partial_request_with_except(app):
         data = response.json()
 
         props = data["props"]
+        assert "flash" in props
         assert "public_data" in props
         assert "timestamp" in props
         assert "private_data" not in props
@@ -193,6 +198,7 @@ def test_inertia_shared_props(app):
 
         props = data["props"]
 
+        assert props["flash"] == {}
         assert props["app_name"] == "Test App"
         assert props["user"]["name"] == "John"
         assert props["user"]["role"] == "admin"
@@ -209,6 +215,7 @@ def test_inertia_callable_props(app):
         data = response.json()
 
         props = data["props"]
+        assert "flash" in props
         assert isinstance(props["timestamp"], str)
 
         datetime.fromisoformat(props["timestamp"])
@@ -224,6 +231,7 @@ def test_inertia_user_detail_route(app):
         data = response.json()
 
         assert data["component"] == "UserDetail"
+        assert "flash" in data["props"]
         user = data["props"]["user"]
         assert user["id"] == 123
         assert user["name"] == "User123"
@@ -239,6 +247,7 @@ def test_inertia_optional_prop_in_non_partial(app):
         data = response.json()
         props = data["props"]
 
+        assert "flash" in props
         # OptionalProp should be filtered out in non-partial request
         assert "lazy_data" not in props
 
@@ -259,6 +268,7 @@ def test_inertia_optional_prop_in_partial(app):
         data = response.json()
         props = data["props"]
 
+        assert "flash" in props
         # Specified OptionalProp should exist in partial request
         assert "lazy_data" in props
         assert props["lazy_data"] == "Lazy loaded data"
@@ -311,8 +321,8 @@ def test_flash_messages_in_json_response(app_with_session):
 
         assert data["component"] == "CreateUser"
         assert data["props"]["user_id"] == 123
-        assert data["props"]["success"] == "User created successfully"
-        assert data["props"]["info"] == "Check your email for confirmation"
+        assert data["props"]["flash"]["success"] == "User created successfully"
+        assert data["props"]["flash"]["info"] == "Check your email for confirmation"
 
 
 def test_flash_messages_in_html_response(app_with_session):
@@ -329,7 +339,7 @@ def test_flash_messages_in_html_response(app_with_session):
 
         assert page_data["component"] == "Profile"
         assert page_data["props"]["username"] == "john_doe"
-        assert page_data["props"]["success"] == "Profile updated"
+        assert page_data["props"]["flash"]["success"] == "Profile updated"
 
 
 def test_flash_messages_with_shared_props(app_with_session):
@@ -344,6 +354,7 @@ def test_flash_messages_with_shared_props(app_with_session):
         data = response.json()
         props = data["props"]
 
+        assert "flash" in props
         assert props["app_name"] == "Test App"
         assert props["stats"]["views"] == 100
 
@@ -358,9 +369,9 @@ def test_flash_supports_complex_data_types(app_with_session):
         data = response.json()
         props = data["props"]
 
-        assert props["error"] == "Operation failed"
-        assert props["details"]["code"] == 500
-        assert props["details"]["message"] == "Internal error"
+        assert props["flash"]["error"] == "Operation failed"
+        assert props["flash"]["details"]["code"] == 500
+        assert props["flash"]["details"]["message"] == "Internal error"
 
 
 def test_flash_without_session_middleware():
@@ -410,12 +421,12 @@ def test_flash_messages_cleared_after_redirect():
 
         assert response.status_code == 200
         data = response.json()
-        assert data["props"]["success"] == "Form submitted successfully"
+        assert data["props"]["flash"]["success"] == "Form submitted successfully"
 
         # Second request - flash message should be gone
         response = client.get("/result", headers={InertiaHeader.INERTIA: "true"})
 
         assert response.status_code == 200
         data = response.json()
-        assert "success" not in data["props"]
+        assert "success" not in data["props"]["flash"]
         assert data["props"]["status"] == "ok"

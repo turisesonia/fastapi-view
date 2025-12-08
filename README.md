@@ -171,6 +171,25 @@ def login(inertia: InertiaDepends):
     return inertia.render("Dashboard")
 ```
 
+Flash messages are available on the frontend under the `flash` prop:
+
+```vue
+<script setup>
+import { usePage } from '@inertiajs/vue3'
+
+const page = usePage()
+const flash = page.props.flash
+
+// Access flash messages
+if (flash.success) {
+  console.log(flash.success)
+}
+if (flash.error) {
+  console.log(flash.error)
+}
+</script>
+```
+
 ### Custom Response Configuration
 
 ```python

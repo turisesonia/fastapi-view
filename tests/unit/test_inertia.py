@@ -269,7 +269,7 @@ def test_build_page_data_basic(mock_request, inertia):
 
     assert result["version"] == "1.0.0"
     assert result["component"] == "TestComponent"
-    assert result["props"] == {"name": "John", "age": 30}
+    assert result["props"] == {"flash": {}, "name": "John", "age": 30}
     assert result["url"] == "http://test.com/"
 
 
@@ -281,7 +281,12 @@ def test_build_page_data_with_shared_props(mock_request, inertia):
 
     result = inertia._build_page_data(props)
 
-    assert result["props"] == {"app_name": "Test App", "version": "1.0", "name": "John"}
+    assert result["props"] == {
+        "app_name": "Test App",
+        "version": "1.0",
+        "flash": {},
+        "name": "John",
+    }
 
     Inertia._share = {}
 
@@ -293,7 +298,7 @@ def test_build_page_data_with_callable_props(mock_request, inertia):
 
     result = inertia._build_page_data(props)
 
-    assert result["props"] == {"name": "John", "timestamp": "2024-01-01"}
+    assert result["props"] == {"flash": {}, "name": "John", "timestamp": "2024-01-01"}
 
 
 def test_build_page_data_with_ignore_first_load(mock_request, inertia):
@@ -307,7 +312,7 @@ def test_build_page_data_with_ignore_first_load(mock_request, inertia):
 
     result = inertia._build_page_data(props)
 
-    assert result["props"] == {"name": "John"}
+    assert result["props"] == {"flash": {}, "name": "John"}
 
 
 def test_render_json_response(mock_request, inertia):
@@ -323,7 +328,7 @@ def test_render_json_response(mock_request, inertia):
 
     content = json.loads(response.body.decode())
     assert content["component"] == "TestComponent"
-    assert content["props"] == {"name": "John", "age": 30}
+    assert content["props"] == {"flash": {}, "name": "John", "age": 30}
     assert content["version"] == "1.0.0"
 
 
@@ -342,7 +347,7 @@ def test_render_html_response(mock_request, mock_view_instance, inertia):
 
     page_data = json.loads(call_args[0][1]["page"])
     assert page_data["component"] == "TestComponent"
-    assert page_data["props"] == {"name": "John", "age": 30}
+    assert page_data["props"] == {"flash": {}, "name": "John", "age": 30}
 
 
 def test_render_without_props(mock_request, inertia):
@@ -353,7 +358,7 @@ def test_render_without_props(mock_request, inertia):
 
     content = json.loads(response.body.decode())
     assert content["component"] == "TestComponent"
-    assert content["props"] == {}
+    assert content["props"] == {"flash": {}}
 
 
 @pytest.mark.parametrize(
@@ -413,13 +418,18 @@ def test_flash_adds_and_overwrites_messages(inertia):
     inertia.flash("error", "Error message")
     inertia.flash("success", "Overwritten message")
 
-    assert mock_session[SESSION_FLASH_KEY]["success"] == "Overwritten message"
-    assert mock_session[SESSION_FLASH_KEY]["error"] == "Error message"
+    assert mock_session[SESSION_FLASH_KEY] == {
+        "success": "Overwritten message",
+        "error": "Error message",
+    }
 
 
 def test_flash_messages_are_removed_after_reading(inertia):
     """Test flash messages are removed from session after being read"""
-    mock_session = {SESSION_FLASH_KEY: {"success": "Test message", "info": "Another message"}}
+    mock_session = {
+        SESSION_FLASH_KEY: {"success": "Test message", "info": "Another message"}
+    }
+
     inertia._request.scope = {REQUEST_SESSION_KEY: True}
     inertia._request.session = mock_session
 
@@ -453,18 +463,18 @@ def test_flash_supports_various_value_types(inertia, value):
 @pytest.mark.parametrize(
     "scope,session,shared_data,expected_props",
     [
-        ({}, None, {}, {"user": "John"}),
+        ({}, None, {}, {"flash": {}, "user": "John"}),
         (
             {REQUEST_SESSION_KEY: True},
             {SESSION_FLASH_KEY: {"success": "Done"}},
             {},
-            {"success": "Done", "user": "John"},
+            {"flash": {"success": "Done"}, "user": "John"},
         ),
         (
             {REQUEST_SESSION_KEY: True},
             {SESSION_FLASH_KEY: {"error": "Failed"}},
             {"app": "Test"},
-            {"app": "Test", "error": "Failed", "user": "John"},
+            {"app": "Test", "flash": {"error": "Failed"}, "user": "John"},
         ),
     ],
 )

@@ -67,10 +67,10 @@ class Inertia:
         return list(map(lambda s: s.strip(), keys))
 
     def _build_page_data(self, props: dict) -> dict:
-        flash_props = self._get_flash_props()
-
         props = self._resolve_partial_props(props)
         props = self._resolve_callable_props(props)
+
+        flash_props = {SESSION_FLASH_KEY: self._get_flash_props()}
 
         return jsonable_encoder(
             {

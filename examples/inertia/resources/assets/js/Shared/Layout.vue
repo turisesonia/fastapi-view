@@ -153,14 +153,15 @@ function logout() {
 watch(
   () => page.props,
   (props: any) => {
-    if (props.success) {
-      flashMessage.value = { type: 'success', message: props.success }
-    } else if (props.error) {
-      flashMessage.value = { type: 'error', message: props.error }
-    } else if (props.warning) {
-      flashMessage.value = { type: 'warning', message: props.warning }
-    } else if (props.info) {
-      flashMessage.value = { type: 'info', message: props.info }
+    const flash = props.flash || {}
+    if (flash.success) {
+      flashMessage.value = { type: 'success', message: flash.success }
+    } else if (flash.error) {
+      flashMessage.value = { type: 'error', message: flash.error }
+    } else if (flash.warning) {
+      flashMessage.value = { type: 'warning', message: flash.warning }
+    } else if (flash.info) {
+      flashMessage.value = { type: 'info', message: flash.info }
     } else {
       flashMessage.value = { type: 'info', message: '' }
     }
