@@ -1,6 +1,6 @@
 [project]
 name = "fastapi-view"
-version = "0.6.0"
+version = "0.6.1"
 description = "A jinja2 view template helping function for FastAPI."
 authors = [{ name = "Sam Yao", email = "turisesonia@gmail.com" }]
 license = { text = "MIT" }
