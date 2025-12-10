@@ -1,5 +1,6 @@
 import typing as t
 
+
 class IgnoreFirstLoad:
     pass
 
@@ -12,9 +13,16 @@ class CallableProp:
         return self._prop() if callable(self._prop) else self._prop
 
 
-class LazyProp(IgnoreFirstLoad, CallableProp):
+class OptionalProp(IgnoreFirstLoad, CallableProp):
     pass
 
 
-class OptionalProp(IgnoreFirstLoad, CallableProp):
+class DeferredProp(IgnoreFirstLoad, CallableProp):
+    def __init__(self, prop: t.Any, group: str = "default"):
+        super().__init__(prop)
+
+        self.group = group
+
+
+class MergedProp(IgnoreFirstLoad, CallableProp):
     pass
