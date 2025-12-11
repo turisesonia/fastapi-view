@@ -190,6 +190,119 @@ if (flash.error) {
 </script>
 ```
 
+### Deferred Props
+
+Use deferred props to load expensive data after the initial page render, improving perceived performance:
+
+```python
+@app.get("/dashboard")
+def dashboard(inertia: InertiaDepends):
+    return inertia.render("Dashboard/Index", props={
+        # Fast data loaded immediately
+        "quick_stats": get_quick_stats(),
+
+        # Slow data deferred - loads after initial page render
+        "statistics": inertia.defer(lambda: get_statistics(), group="analytics"),
+        "recent_activities": inertia.defer(lambda: fetch_activities(), group="analytics"),
+
+        # Another deferred group for separate loading
+        "chart_data": inertia.defer(lambda: get_chart_data(), group="charts")
+    })
+```
+
+On the frontend, deferred props will be `undefined` initially, then populated once loaded:
+
+```vue
+<template>
+  <!-- Show skeleton while loading -->
+  <div v-if="statistics">
+    <p>Total Users: {{ statistics.total_users }}</p>
+  </div>
+  <div v-else class="animate-pulse">
+    <div class="h-4 bg-gray-300 rounded"></div>
+  </div>
+</template>
+
+<script setup>
+defineProps(['statistics'])  // Will be undefined, then populated
+</script>
+```
+
+**Benefits:**
+- Faster initial page load
+- Better user experience with progressive data loading
+- Group related deferred props for efficient batching
+
+### Merge Props
+
+Use merge props to combine new data with existing client-side data during partial reloads (perfect for infinite scroll, "load more" features):
+
+```python
+@app.get("/posts")
+def posts(inertia: InertiaDepends, page: int = 1):
+    per_page = 10
+    offset = (page - 1) * per_page
+    posts = fetch_posts(offset, per_page)
+
+    return inertia.render("Posts/Index", props={
+        "posts": inertia.merge(lambda: posts),
+        "pagination": {
+            "current_page": page,
+            "has_more": has_more_posts(page, per_page)
+        }
+    })
+```
+
+On the frontend, use Inertia's partial reload to append new data:
+
+```vue
+<template>
+  <div>
+    <div v-for="post in posts" :key="post.id">
+      <h3>{{ post.title }}</h3>
+    </div>
+
+    <button v-if="pagination.has_more" @click="loadMore">
+      Load More
+    </button>
+  </div>
+</template>
+
+<script setup>
+import { router } from '@inertiajs/vue3'
+
+const props = defineProps(['posts', 'pagination'])
+
+function loadMore() {
+  router.reload({
+    data: { page: props.pagination.current_page + 1 },
+    only: ['posts', 'pagination']
+  })
+}
+</script>
+```
+
+**Advanced merge options:**
+
+```python
+# Deep merge for nested objects
+inertia.merge(lambda: data).deep_merge()
+
+# Prepend instead of append
+inertia.merge(lambda: posts).prepend()
+
+# Append/prepend at specific paths
+inertia.merge(lambda: data).append(paths=["items", "results"])
+
+# Prevent duplicates by matching on a field
+inertia.merge(lambda: posts).append(match_on="id")
+```
+
+**Benefits:**
+- Efficient "load more" / infinite scroll implementations
+- Reduced data transfer on partial reloads
+- Automatic client-side data merging
+
 ### Custom Response Configuration
 
 ```python
