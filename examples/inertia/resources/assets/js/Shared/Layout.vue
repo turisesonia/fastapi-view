@@ -51,6 +51,21 @@
                 </svg>
                 Users
               </a>
+
+              <!-- Merge Props Demo Link -->
+              <div class="pt-4 mt-4 border-t border-indigo-700">
+                <div class="px-4 py-2 text-xs font-semibold text-indigo-400 uppercase tracking-wider">
+                  Demos
+                </div>
+                <a href="/merge-demo" class="flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors"
+                  :class="isUrl('merge-demo') ? 'bg-indigo-800 text-white' : 'text-indigo-300 hover:bg-indigo-800 hover:text-white'">
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                  </svg>
+                  Merge Props
+                </a>
+              </div>
             </div>
           </div>
         </div>

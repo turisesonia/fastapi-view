@@ -272,7 +272,7 @@ def test_build_page_object_basic(mock_request, inertia):
 
     assert result["version"] == "1.0.0"
     assert result["component"] == "TestComponent"
-    assert result["props"] == {"flash": None, "name": "John", "age": 30}
+    assert result["props"] == {"flash": {}, "name": "John", "age": 30}
     assert result["url"] == "http://test.com/"
 
 
@@ -287,7 +287,7 @@ def test_build_page_object_with_shared_props(mock_request, inertia):
     assert result["props"] == {
         "app_name": "Test App",
         "version": "1.0",
-        "flash": None,
+        "flash": {},
         "name": "John",
     }
 
@@ -301,7 +301,7 @@ def test_build_page_object_with_callable_props(mock_request, inertia):
 
     result = inertia._build_page_object(props)
 
-    assert result["props"] == {"flash": None, "name": "John", "timestamp": "2024-01-01"}
+    assert result["props"] == {"flash": {}, "name": "John", "timestamp": "2024-01-01"}
 
 
 def test_build_page_object_with_ignore_first_load(mock_request, inertia):
@@ -315,7 +315,7 @@ def test_build_page_object_with_ignore_first_load(mock_request, inertia):
 
     result = inertia._build_page_object(props)
 
-    assert result["props"] == {"flash": None, "name": "John"}
+    assert result["props"] == {"flash": {}, "name": "John"}
 
 
 def test_render_json_response(mock_request, inertia):
@@ -331,7 +331,7 @@ def test_render_json_response(mock_request, inertia):
 
     content = json.loads(response.body.decode())
     assert content["component"] == "TestComponent"
-    assert content["props"] == {"flash": None, "name": "John", "age": 30}
+    assert content["props"] == {"flash": {}, "name": "John", "age": 30}
     assert content["version"] == "1.0.0"
 
 
@@ -350,7 +350,7 @@ def test_render_html_response(mock_request, mock_view_instance, inertia):
 
     page_data = json.loads(call_args[0][1]["page"])
     assert page_data["component"] == "TestComponent"
-    assert page_data["props"] == {"flash": None, "name": "John", "age": 30}
+    assert page_data["props"] == {"flash": {}, "name": "John", "age": 30}
 
 
 def test_render_without_props(mock_request, inertia):
@@ -361,7 +361,7 @@ def test_render_without_props(mock_request, inertia):
 
     content = json.loads(response.body.decode())
     assert content["component"] == "TestComponent"
-    assert content["props"] == {"flash": None}
+    assert content["props"] == {"flash": {}}
 
 
 @pytest.mark.parametrize(
@@ -384,7 +384,7 @@ def test_get_request_session(inertia, scope, session, expected):
 @pytest.mark.parametrize(
     "scope,session,expected",
     [
-        ({}, None, {FLASH_PROPS_KEY: None}),
+        ({}, None, {FLASH_PROPS_KEY: {}}),
         ({REQUEST_SESSION_KEY: True}, {"user": "John"}, {FLASH_PROPS_KEY: {}}),
         (
             {REQUEST_SESSION_KEY: True},
@@ -468,7 +468,7 @@ def test_flash_supports_various_value_types(inertia, value):
 @pytest.mark.parametrize(
     "scope,session,shared_data,expected_props",
     [
-        ({}, None, {}, {"flash": None, "user": "John"}),
+        ({}, None, {}, {"flash": {}, "user": "John"}),
         (
             {REQUEST_SESSION_KEY: True},
             {FLASH_PROPS_KEY: {"success": "Done"}},

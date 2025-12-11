@@ -5,13 +5,11 @@ from fastapi import Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, Response
 
-from fastapi_view.inertia.props import DeferredProp
-
 from ..view import ViewContext
 from ..vite.extension import ViteExtension
 from .config import InertiaSettings
 from .enums import InertiaHeader
-from .props import CallableProp, IgnoreFirstLoad, OptionalProp
+from .props import CallableProp, DeferredProp, IgnoreFirstLoad, MergeProp, OptionalProp
 
 REQUEST_SESSION_KEY: str = "session"
 FLASH_PROPS_KEY: str = "flash"
@@ -25,6 +23,10 @@ class PageObject(t.TypedDict, total=False):
     clearHistory: bool
     encryptHistory: bool
     deferredProps: dict[str, list[str]]
+    mergeProps: list[str]
+    prependProps: list[str]
+    deepMergeProps: list[str]
+    matchPropsOn: dict[str, str]
 
 
 class InertiaShare:
@@ -57,6 +59,50 @@ class InertiaProp:
         """
 
         return DeferredProp(prop, group)
+
+    @staticmethod
+    def merge(prop: t.Any) -> MergeProp:
+        """
+        Create a mergeable property that combines with existing data.
+
+        Args:
+            prop: Callable or value to merge
+
+        Returns:
+            MergeProp instance
+
+        Example:
+            # Basic merge (appends to root array)
+            Inertia.merge(lambda: get_more_posts())
+
+            # Prepend instead of append
+            Inertia.merge(lambda: get_new_posts()).prepend()
+
+            # Merge specific nested path
+            Inertia.merge(lambda: get_users()).append('data')
+
+            # Match on ID to update existing items
+            Inertia.merge(lambda: get_users()).append('data', match_on='id')
+        """
+
+        return MergeProp(prop)
+
+    @staticmethod
+    def deep_merge(prop: t.Any) -> MergeProp:
+        """
+        Create a deep mergeable property that recursively combines with existing data.
+
+        Args:
+            prop: Callable or value to deep merge
+
+        Returns:
+            MergeProp instance configured for deep merging
+
+        Example:
+            Inertia.deep_merge(lambda: get_settings())
+        """
+
+        return MergeProp(prop).deep_merge()
 
 
 class Inertia(InertiaShare, InertiaProp):
@@ -117,22 +163,31 @@ class Inertia(InertiaShare, InertiaProp):
         return self._view.render(self._root_template, {"page": json.dumps(page_object)})
 
     def _build_page_object(self, props: dict) -> dict:
+        # Resolve metadata configurations (only for initial loads)
         deferred_props = self._resolve_deferred_props(props)
+        merge_props = self._resolve_merge_props(props)
+
+        # Get flash messages
         flash_props = self._get_flash_props()
 
-        props = self._resolve_props(props)
+        # Resolve all props
+        resolved_props = self._resolve_props(props)
 
         # Build base page object
         page_object = PageObject(
             component=self._component,
-            props={**self._share, **flash_props, **props},
+            props={**self._share, **flash_props, **resolved_props},
             url=str(self._request.url),
             version=self._assets_version,
         )
 
-        # Add deferredProps config ONLY for initial loads
+        # Add metadata ONLY for initial loads
         if deferred_props:
             page_object["deferredProps"] = deferred_props
+
+        if merge_props:
+            # Spread merge config keys into page object
+            page_object.update(merge_props)
 
         return jsonable_encoder(page_object)
 
@@ -152,6 +207,61 @@ class Inertia(InertiaShare, InertiaProp):
             deferred_props[group].append(key)
 
         return deferred_props
+
+    def _resolve_merge_props(self, props: dict) -> dict[str, list[str] | dict] | None:
+        """
+        Build merge configuration metadata for client.
+
+        Returns dictionary with merge instructions:
+        {
+            "mergeProps": ["users", "posts"],
+            "prependProps": ["notifications"],
+            "deepMergeProps": ["settings"],
+            "matchPropsOn": {"users": "id", "posts": "id"}
+        }
+
+        Returns metadata for both initial and partial requests.
+        The client needs this metadata on every response to know how to merge props.
+        """
+        merge_config = {}
+        merge_props = []
+        prepend_props = []
+        deep_merge_props = []
+        match_props_on = {}
+
+        for key, value in props.items():
+            if not isinstance(value, MergeProp):
+                continue
+
+            # Collect merge props
+            if value.should_merge():
+                merge_props.append(key)
+
+            # Collect prepend props
+            if value.prepends_at_root():
+                prepend_props.append(key)
+
+            # Collect deep merge props
+            if value.should_deep_merge():
+                deep_merge_props.append(key)
+
+            # Collect match strategies
+            match_fields = value.matches_on()
+            if match_fields:
+                # Use first match field (Laravel behavior)
+                match_props_on[key] = match_fields[0]
+
+        # Only include non-empty arrays
+        if merge_props:
+            merge_config["mergeProps"] = merge_props
+        if prepend_props:
+            merge_config["prependProps"] = prepend_props
+        if deep_merge_props:
+            merge_config["deepMergeProps"] = deep_merge_props
+        if match_props_on:
+            merge_config["matchPropsOn"] = match_props_on
+
+        return merge_config if merge_config else None
 
     def _resolve_props(self, props: dict) -> dict:
         props = self._resolve_partial_props(props)
@@ -225,7 +335,7 @@ class Inertia(InertiaShare, InertiaProp):
     def _get_flash_props(self) -> dict:
         session = self._get_request_session()
         if session is None:
-            return {FLASH_PROPS_KEY: None}
+            return {FLASH_PROPS_KEY: {}}
 
         props = session.pop(FLASH_PROPS_KEY, {})
 
