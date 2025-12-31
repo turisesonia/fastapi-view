@@ -30,11 +30,11 @@ class PageObject(t.TypedDict, total=False):
 
 
 class InertiaShare:
-    _share: dict = {}
+    def __init__(self):
+        self._share: dict = {}
 
-    @classmethod
-    def share(cls, key: str, value: t.Any):
-        cls._share[key] = value
+    def share(self, key: str, value: t.Any):
+        self._share[key] = value
 
 
 class InertiaProp:
@@ -111,6 +111,8 @@ class Inertia(InertiaShare, InertiaProp):
     _component: str | None = None
 
     def __init__(self, request: Request):
+        super().__init__()
+
         self._view = ViewContext(request)
         self._settings = InertiaSettings()
 

@@ -128,18 +128,34 @@ export FV_VITE_MANIFEST_PATH=public/build/manifest.json
 
 ### Shared Inertia Props
 
-Share data across all Inertia responses:
+Share data within a request by calling `share()` on the Inertia instance:
 
 ```python
-from fastapi import FastAPI
-from fastapi_view.inertia import Inertia
+from fastapi_view.inertia import InertiaDepends
 
-app = FastAPI()
+@app.get("/dashboard")
+def dashboard(inertia: InertiaDepends):
+    # Share props for this request
+    inertia.share("app_name", "My Application")
+    inertia.share("user", get_current_user())
 
-@app.on_event("startup")
-def configure_inertia():
-    Inertia.share("app_name", "My Application")
-    Inertia.share("version", "1.0.0")
+    return inertia.render("Dashboard/Index", props={"stats": get_stats()})
+```
+
+For sharing data across all routes, use a dependency or middleware:
+
+```python
+from fastapi import Depends
+
+def with_shared_props(inertia: InertiaDepends):
+    inertia.share("app_name", "My Application")
+    inertia.share("version", "1.0.0")
+
+    return inertia
+
+@app.get("/dashboard")
+def dashboard(inertia: InertiaDepends = Depends(with_shared_props)):
+    return inertia.render("Dashboard/Index", props={"stats": get_stats()})
 ```
 
 ### Optional Props
@@ -229,6 +245,7 @@ defineProps(['statistics'])  // Will be undefined, then populated
 ```
 
 **Benefits:**
+
 - Faster initial page load
 - Better user experience with progressive data loading
 - Group related deferred props for efficient batching
@@ -299,6 +316,7 @@ inertia.merge(lambda: posts).append(match_on="id")
 ```
 
 **Benefits:**
+
 - Efficient "load more" / infinite scroll implementations
 - Reduced data transfer on partial reloads
 - Automatic client-side data merging
