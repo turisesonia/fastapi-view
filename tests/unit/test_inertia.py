@@ -43,9 +43,6 @@ def mock_view_instance(mock_request: Mock) -> Mock:
 @pytest.fixture
 def inertia(mock_request: Mock, mock_view_instance: Mock) -> Inertia:
     """Create Inertia instance with mocked ViewContext"""
-    # Clear shared state before each test
-    Inertia._share = {}
-
     with patch("fastapi_view.inertia.inertia.ViewContext") as mock_view_cls:
         mock_view_cls.return_value = mock_view_instance
         inertia_instance = Inertia(request=mock_request)
@@ -234,19 +231,15 @@ def test_resolve_property_instances_no_recursive_on_returned_dicts(inertia):
     assert result["data"]["value"] == "static"
 
 
-def test_share_method():
-    """Test share class method"""
-    Inertia._share = {}
+def test_share_method(inertia):
+    """Test share instance method"""
+    inertia.share("user", {"name": "John", "email": "john@example.com"})
+    inertia.share("app_name", "My App")
 
-    Inertia.share("user", {"name": "John", "email": "john@example.com"})
-    Inertia.share("app_name", "My App")
-
-    assert Inertia._share == {
+    assert inertia._share == {
         "user": {"name": "John", "email": "john@example.com"},
         "app_name": "My App",
     }
-
-    Inertia._share = {}
 
 
 @pytest.mark.parametrize(
@@ -278,7 +271,8 @@ def test_build_page_object_basic(mock_request, inertia):
 
 def test_build_page_object_with_shared_props(mock_request, inertia):
     """Test _build_page_object includes shared data"""
-    Inertia._share = {"app_name": "Test App", "version": "1.0"}
+    inertia.share("app_name", "Test App")
+    inertia.share("version", "1.0")
     inertia._component = "TestComponent"
     props = {"name": "John"}
 
@@ -290,8 +284,6 @@ def test_build_page_object_with_shared_props(mock_request, inertia):
         "flash": {},
         "name": "John",
     }
-
-    Inertia._share = {}
 
 
 def test_build_page_object_with_callable_props(mock_request, inertia):
@@ -487,7 +479,8 @@ def test_build_page_object_with_flash_integration(
     inertia, scope, session, shared_data, expected_props
 ):
     """Test _build_page_object correctly merges flash, shared, and regular props"""
-    Inertia._share = shared_data
+    for key, value in shared_data.items():
+        inertia.share(key, value)
     inertia._request.scope = scope
     inertia._request.session = session
     inertia._component = "TestComponent"
@@ -495,7 +488,6 @@ def test_build_page_object_with_flash_integration(
     result = inertia._build_page_object({"user": "John"})
 
     assert result["props"] == expected_props
-    Inertia._share = {}
 
 
 def test_deferred_props_excluded_on_initial_load(inertia):

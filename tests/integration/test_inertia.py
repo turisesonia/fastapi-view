@@ -73,8 +73,8 @@ def app() -> FastAPI:
 
     @app.get("/shared-demo")
     def shared_demo(inertia: InertiaDepends):
-        Inertia.share("app_name", "Test App")
-        Inertia.share("user", {"name": "John", "role": "admin"})
+        inertia.share("app_name", "Test App")
+        inertia.share("user", {"name": "John", "role": "admin"})
 
         return inertia.render("SharedDemo", {"page_data": "Page specific data"})
 
@@ -295,7 +295,7 @@ def app_with_session() -> FastAPI:
 
     @app.get("/dashboard")
     def dashboard(inertia: InertiaDepends):
-        Inertia.share("app_name", "Test App")
+        inertia.share("app_name", "Test App")
 
         return inertia.render("Dashboard", {"stats": {"views": 100}})
 
